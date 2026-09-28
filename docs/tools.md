@@ -4,7 +4,7 @@
 > `src/schemas/` and the tool registry in `src/tools/registry.ts`.
 > Do not hand-edit; run `npm run gen:docs` after changing a tool or schema.
 >
-> Generated at: 2026-09-28T20:20:16.808Z
+> Generated at: 2026-09-28T20:24:26.459Z
 > Total tools: 84
 
 ## Tiers

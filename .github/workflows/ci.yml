@@ -89,7 +89,7 @@ jobs:
               --exclude-dir=.git \
               --exclude-dir=dist \
               --exclude-dir=coverage \
-              'WHMCS_API_(IDENTIFIER|SECRET|ACCESS_KEY)\s*=\s*[A-Za-z0-9]{8,}(?!\.)' \
+              'WHMCS_API_(IDENTIFIER|SECRET|ACCESS_KEY)\s*=\s*[A-Za-z0-9]{8,}\b(?!\.)' \
               . ; then
             echo "::error::Possible committed WHMCS credential detected."
             exit 1

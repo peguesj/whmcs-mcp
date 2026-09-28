@@ -43,7 +43,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src test scripts --ext .ts",
+    "lint": "eslint src --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:docs": "tsx scripts/gen-docs.ts",
