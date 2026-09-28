@@ -1,5 +1,5 @@
 {
-  "name": "@peguesj/whmcs-mcp",
+  "name": "whmcs-bridge-mcp",
   "version": "0.1.0",
   "description": "MCP server for the WHMCS External API: read-only by default, write actions opt-in per domain, confirmation-gated billing mutations, PII/secret redaction, and runtime version detection (8.x/9.x compatible).",
   "type": "module",
@@ -50,7 +50,8 @@
     "screenshots": "tsx scripts/capture-screenshots.ts",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm run build",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -64,7 +65,7 @@
     "prettier": "^3.3.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.11"
   },
   "publishConfig": {
     "access": "public",

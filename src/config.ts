@@ -76,7 +76,7 @@ const PublicConfigSchema = z.object({
     .string()
     .trim()
     .min(1, "WHMCS_API_URL is required")
-    .url("WHMCS_API_URL must be a valid URL")
+    .url("WHMCS_API_URL must be a valid URL") // eslint-disable-line @typescript-eslint/no-deprecated -- z.string().url() is the documented zod v4 form for validating an existing string; z.url() is a separate top-level schema, not a drop-in chained method here.
     // The External API endpoint is a fixed path under the WHMCS install root
     // (e.g. https://billing.example.com). Callers may pass either the
     // install root or the full .../includes/api.php path; whmcs-client.ts
@@ -150,7 +150,7 @@ function formatZodError(prefix: string, err: z.ZodError): string {
  * env-like record, for testing). Throws ConfigError on any invalid or
  * missing required value — fail fast at startup, never at tool-call time.
  */
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): WhmcsMcpConfig {
+export function loadConfig(env: Record<string, string | undefined> = process.env): WhmcsMcpConfig {
   const publicResult = PublicConfigSchema.safeParse({
     apiUrl: env.WHMCS_API_URL,
     allowInsecure: env.WHMCS_MCP_ALLOW_INSECURE,
@@ -194,9 +194,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WhmcsMcpConfig
   }
 
   const secrets = secretsResult.data;
-  const secretsHolder = { [SECRETS]: secrets } as {
-    [SECRETS]: Secrets;
-  };
+  const secretsHolder = { [SECRETS]: secrets };
 
   const config: WhmcsMcpConfig = {
     ...publicConfig,
@@ -213,7 +211,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WhmcsMcpConfig
   // inside the SECRETS-keyed closure above, never as own enumerable keys
   // of `config`.
   Object.defineProperty(config, "getSecrets", {
-    value: config.getSecrets,
+    value: () => config.getSecrets(),
     enumerable: false,
     writable: false,
     configurable: false,
@@ -225,10 +223,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WhmcsMcpConfig
 /** Convenience singleton for the common case of one process, one config. */
 let cached: WhmcsMcpConfig | undefined;
 
-export function getConfig(env: NodeJS.ProcessEnv = process.env): WhmcsMcpConfig {
-  if (!cached) {
-    cached = loadConfig(env);
-  }
+export function getConfig(env: Record<string, string | undefined> = process.env): WhmcsMcpConfig {
+  cached ??= loadConfig(env);
   return cached;
 }
 

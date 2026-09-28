@@ -39,7 +39,7 @@ const LEVEL_WEIGHT: Record<LogLevel, number> = {
   error: 40,
 };
 
-function resolveMinLevel(env: NodeJS.ProcessEnv = process.env): LogLevel {
+function resolveMinLevel(env: Record<string, string | undefined> = process.env): LogLevel {
   const raw = (env.WHMCS_MCP_LOG_LEVEL ?? "info").toLowerCase().trim();
   return (LOG_LEVELS as readonly string[]).includes(raw)
     ? (raw as LogLevel)
@@ -87,7 +87,7 @@ const MAX_REDACT_DEPTH = 8;
  * fields recurse), Maps/Sets (stringified), and primitives. Circular
  * references are broken with a `[Circular]` marker rather than throwing.
  */
-export function redactForLog(value: unknown, seen = new WeakSet<object>(), depth = 0): unknown {
+export function redactForLog(value: unknown, seen = new WeakSet(), depth = 0): unknown {
   if (value === null || value === undefined) return value;
 
   if (depth >= MAX_REDACT_DEPTH) return "[Truncated]";
@@ -113,7 +113,7 @@ export function redactForLog(value: unknown, seen = new WeakSet<object>(), depth
 
   if (typeof value !== "object") return value;
 
-  const obj = value as object;
+  const obj = value;
   if (seen.has(obj)) return "[Circular]";
   seen.add(obj);
 
@@ -140,9 +140,7 @@ export function redactForLog(value: unknown, seen = new WeakSet<object>(), depth
 /* Structured log record                                               */
 /* ------------------------------------------------------------------ */
 
-export interface LogFields {
-  [key: string]: unknown;
-}
+export type LogFields = Record<string, unknown>;
 
 interface LogRecord {
   ts: string;
@@ -152,12 +150,35 @@ interface LogRecord {
   [key: string]: unknown;
 }
 
+/**
+ * Small in-memory ring buffer of every already-redacted, serialized log
+ * line this process has written. Exists purely for test observability (e.g.
+ * asserting that no secret ever reaches a log line) — it never influences
+ * what gets written to stderr and carries no additional redaction risk
+ * since it stores the exact same already-redacted JSON string.
+ */
+const LOG_BUFFER_MAX = 500;
+const logBuffer: string[] = [];
+
+/** Returns a snapshot of the buffered log lines (oldest first), post-redaction. */
+export function getLogBuffer(): readonly string[] {
+  return [...logBuffer];
+}
+
+/** Clears the in-memory log buffer. Call between test cases to avoid cross-test leakage. */
+export function resetLogBuffer(): void {
+  logBuffer.length = 0;
+}
+
 function writeStderr(record: LogRecord): void {
   // Single synchronous write, newline-delimited JSON, stderr only.
   // Never touch process.stdout — that stream is reserved for the MCP
   // JSON-RPC transport (StdioServerTransport).
   try {
-    process.stderr.write(`${JSON.stringify(record)}\n`);
+    const line = JSON.stringify(record);
+    logBuffer.push(line);
+    if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
+    process.stderr.write(`${line}\n`);
   } catch {
     // Last-resort fallback if a value survived redaction but still fails
     // to serialize (e.g. a BigInt slipped through). Never throw from the
@@ -185,7 +206,7 @@ export interface Logger {
   child(bindings: LogFields): Logger;
 }
 
-function makeLogger(component: string | undefined, bindings: LogFields, env: NodeJS.ProcessEnv): Logger {
+function makeLogger(component: string | undefined, bindings: LogFields, env: Record<string, string | undefined>): Logger {
   const minLevel = resolveMinLevel(env);
 
   function log(level: LogLevel, msg: string, fields?: LogFields): void {
@@ -203,10 +224,10 @@ function makeLogger(component: string | undefined, bindings: LogFields, env: Nod
   }
 
   return {
-    debug: (msg, fields) => log("debug", msg, fields),
-    info: (msg, fields) => log("info", msg, fields),
-    warn: (msg, fields) => log("warn", msg, fields),
-    error: (msg, fields) => log("error", msg, fields),
+    debug: (msg, fields) => { log("debug", msg, fields); },
+    info: (msg, fields) => { log("info", msg, fields); },
+    warn: (msg, fields) => { log("warn", msg, fields); },
+    error: (msg, fields) => { log("error", msg, fields); },
     child: (childBindings) => makeLogger(component, { ...bindings, ...childBindings }, env),
   };
 }
@@ -223,6 +244,6 @@ export const logger: Logger = makeLogger(undefined, {}, process.env);
  * (e.g. "whmcs-client", "tools/tickets", "safety/confirm") and/or a
  * custom env source for testing.
  */
-export function createLogger(component?: string, env: NodeJS.ProcessEnv = process.env): Logger {
+export function createLogger(component?: string, env: Record<string, string | undefined> = process.env): Logger {
   return makeLogger(component, {}, env);
 }

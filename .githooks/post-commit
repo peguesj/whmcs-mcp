@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Atomic versioning: every real commit on this repo bumps package.json's
+# MINOR version and tags the resulting version-bump commit v<major>.<minor>.0.
+# Guards against recursing into itself via the "chore(version):" prefix.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+last_msg="$(git log -1 --pretty=%s)"
+if [[ "$last_msg" == chore\(version\):* ]]; then
+  exit 0
+fi
+
+if [[ ! -f package.json ]]; then
+  exit 0
+fi
+
+current="$(node -p "require('./package.json').version")"
+IFS='.' read -r major minor _patch <<<"$current"
+next_minor=$((minor + 1))
+next_version="${major}.${next_minor}.0"
+
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+pkg.version = '${next_version}';
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+"
+
+if [[ -f package-lock.json ]]; then
+  node -e "
+const fs = require('fs');
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+lock.version = '${next_version}';
+if (lock.packages && lock.packages['']) lock.packages[''].version = '${next_version}';
+fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+"
+fi
+
+git add package.json package-lock.json 2>/dev/null || git add package.json
+git commit -m "chore(version): bump to v${next_version}" --no-verify --quiet
+git tag -a "v${next_version}" -m "v${next_version}"
+
+echo "whmcs-bridge-mcp: tagged v${next_version}"

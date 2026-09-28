@@ -47,7 +47,7 @@ export const limitnumSchema = z
   .max(MAX_LIMIT_NUM)
   .optional()
   .describe(
-    `Maximum rows to return, capped at ${MAX_LIMIT_NUM} (WHMCS \`limitnum\`).`,
+    `Maximum rows to return, capped at ${String(MAX_LIMIT_NUM)} (WHMCS \`limitnum\`).`,
   );
 
 /** Spread into any list-style tool's input schema shape. */
@@ -105,12 +105,12 @@ export const dateOrDatetimeSchema = z.union([dateSchema, datetimeSchema]);
  * `signedMoneySchema` instead).
  */
 export const moneySchema = z
-  .union([z.number().finite().nonnegative(), z.string().regex(/^\d+(\.\d{1,2})?$/)])
+  .union([z.number().nonnegative(), z.string().regex(/^\d+(\.\d{1,2})?$/)])
   .describe("Decimal amount, e.g. 19.99. Accepts a number or a numeric string.");
 
 /** For fields that may legitimately be negative (e.g. AddCredit type=remove flows). */
 export const signedMoneySchema = z
-  .union([z.number().finite(), z.string().regex(/^-?\d+(\.\d{1,2})?$/)])
+  .union([z.number(), z.string().regex(/^-?\d+(\.\d{1,2})?$/)])
   .describe("Decimal amount, may be negative. Accepts a number or a numeric string.");
 
 /**
@@ -193,3 +193,52 @@ export const noEmailFlagSchema = z
   .boolean()
   .optional()
   .describe("Suppress the client-facing notification email for this action.");
+
+/* ------------------------------------------------------------------ */
+/* Aliases                                                              */
+/*                                                                      */
+/* Several domain schema files (clients.ts, products.ts, ...) reference */
+/* these names directly. Kept as aliases of the canonical schemas above */
+/* so there is exactly one source of truth per concept.                */
+/* ------------------------------------------------------------------ */
+
+/** Alias of `idSchema`, used where a domain file names it semantically. */
+export const clientIdSchema = idSchema;
+
+/** Alias of `idSchema`, used by the products/services domain. */
+export const idField = idSchema;
+
+export const emailSchema = z.string().trim().pipe(z.email());
+
+export const iso2CountrySchema = z
+  .string()
+  .trim()
+  .length(2)
+  .toUpperCase()
+  .describe("ISO 3166-1 alpha-2 country code, e.g. US.");
+
+/** Alias of `limitnumSchema`. */
+export const limitNumSchema = limitnumSchema;
+
+/** Alias of `limitstartSchema`. */
+export const limitStartSchema = limitstartSchema;
+
+export const nonEmptyStringSchema = z.string().trim().min(1);
+
+/** Alias of `sortOrderSchema`. */
+export const sortDirectionSchema = sortOrderSchema;
+
+/**
+ * Several WHMCS actions accept a "1"/"0"/true/false-ish flag. Accepts a
+ * native boolean from the caller; the WHMCS client serializes it downstream.
+ */
+export const booleanish = z.boolean();
+
+/** Alias of `confirmTokenSchema`, named for products/services domain usage. */
+export const confirmTokenField = confirmTokenSchema;
+
+/** Alias of `dryRunSchema`, named for products/services domain usage. */
+export const dryRunField = dryRunSchema;
+
+/** Decimal money value serialized as a string, e.g. "19.99". */
+export const moneyDecimalString = moneySchema;

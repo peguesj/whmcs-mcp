@@ -54,7 +54,8 @@ export type ToolDomain =
   | "products"
   | "invoices"
   | "domains"
-  | "orders";
+  | "orders"
+  | "custom";
 
 export const ALL_TIERS: readonly Tier[] = [
   "read",
@@ -73,6 +74,7 @@ export const ALL_DOMAINS: readonly ToolDomain[] = [
   "invoices",
   "domains",
   "orders",
+  "custom",
 ] as const;
 
 /**
@@ -103,6 +105,16 @@ const ALWAYS_CONFIRM_TIERS: ReadonlySet<Tier> = new Set<Tier>([
   "billing",
   "destructive",
 ]);
+
+/**
+ * True when `tier` is always confirmation-gated regardless of a tool's own
+ * `requiresConfirm` registration flag. Exposed so src/tools/registry.ts can
+ * decide, per call, whether to run the two-step confirm-token flow without
+ * duplicating the tier policy locally.
+ */
+export function requiresConfirmation(tier: Tier): boolean {
+  return ALWAYS_CONFIRM_TIERS.has(tier);
+}
 
 /** Describes the safety-relevant metadata a tool registration must supply. */
 export interface ToolPolicyInput {

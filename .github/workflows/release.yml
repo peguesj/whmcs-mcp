@@ -1,11 +1,11 @@
 name: Release
 
-# Tag-triggered npm publish with provenance for @peguesj/whmcs-mcp.
+# Tag-triggered npm publish with provenance for whmcs-bridge-mcp.
 #
 # Push a tag matching v* (e.g. v0.1.0) to publish. This workflow requires:
 #   - npm's "Trusted Publishing" / OIDC provenance support (npm CLI >= 9.5,
 #     configured here via `id-token: write` + `npm publish --provenance`).
-#   - An NPM_TOKEN repository secret with publish rights on @peguesj/whmcs-mcp,
+#   - An NPM_TOKEN repository secret with publish rights on whmcs-bridge-mcp,
 #     OR npm trusted publisher configuration for this repo (no token needed).
 #   - The package.json version to match the pushed tag (vX.Y.Z -> X.Y.Z).
 

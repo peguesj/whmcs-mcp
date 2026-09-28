@@ -34,8 +34,7 @@
 
 import { z } from "zod";
 import {
-  confirmTokenSchema,
-  dryRunSchema,
+  confirmFields,
   idSchema,
   moneySchema,
   noEmailFlagSchema,
@@ -130,8 +129,7 @@ export const ordersCreateInputSchema = z
     noinvoice: z.boolean().optional(),
     noinvoiceemail: z.boolean().optional(),
     noemail: noEmailFlagSchema,
-    dryRun: dryRunSchema,
-    confirmToken: confirmTokenSchema,
+    ...confirmFields,
   })
   .refine(
     (v) => v.items.every((item, i, arr) => (item.domain === undefined) || arr[i] !== undefined),
@@ -154,7 +152,8 @@ export function serializeOrderItemsToIndexedParams(
   items: readonly OrderItem[],
 ): Record<string, string> {
   const params: Record<string, string> = {};
-  items.forEach((item, i) => {
+  items.forEach((item, index) => {
+    const i = String(index);
     params[`pid[${i}]`] = String(item.pid);
     if (item.billingcycle !== undefined) {
       params[`billingcycle[${i}]`] = item.billingcycle;
@@ -179,7 +178,7 @@ export function serializeOrderItemsToIndexedParams(
     }
     if (item.addons !== undefined) {
       item.addons.forEach((addonId, j) => {
-        params[`addons[${i}][${j}]`] = String(addonId);
+        params[`addons[${i}][${String(j)}]`] = String(addonId);
       });
     }
   });
@@ -194,7 +193,8 @@ export function serializeOrderDomainsToIndexedParams(
   domains: readonly OrderDomainItem[] | undefined,
 ): Record<string, string> {
   const params: Record<string, string> = {};
-  (domains ?? []).forEach((d, i) => {
+  (domains ?? []).forEach((d, index) => {
+    const i = String(index);
     params[`domains[${i}][domain]`] = d.domain;
     params[`domains[${i}][domaintype]`] = d.domaintype;
     params[`domains[${i}][regperiod]`] = String(d.regperiod);
@@ -218,8 +218,7 @@ export const ordersAcceptInputSchema = z.object({
   sendregistrar: z.boolean().optional(),
   autosetup: z.boolean().optional(),
   sendemail: z.boolean().optional(),
-  dryRun: dryRunSchema,
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type OrdersAcceptInput = z.infer<typeof ordersAcceptInputSchema>;
 
@@ -228,7 +227,7 @@ export type OrdersAcceptInput = z.infer<typeof ordersAcceptInputSchema>;
 /* ------------------------------------------------------------------ */
 export const ordersPendingInputSchema = z.object({
   orderid: idSchema,
-  dryRun: dryRunSchema,
+  ...confirmFields,
 });
 export type OrdersPendingInput = z.infer<typeof ordersPendingInputSchema>;
 
@@ -239,7 +238,7 @@ export const ordersCancelInputSchema = z.object({
   orderid: idSchema,
   cancelsub: z.boolean().optional(),
   noemail: noEmailFlagSchema,
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type OrdersCancelInput = z.infer<typeof ordersCancelInputSchema>;
 
@@ -249,7 +248,7 @@ export type OrdersCancelInput = z.infer<typeof ordersCancelInputSchema>;
 export const ordersMarkFraudInputSchema = z.object({
   orderid: idSchema,
   cancelsub: z.boolean().optional(),
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type OrdersMarkFraudInput = z.infer<typeof ordersMarkFraudInputSchema>;
 
@@ -262,7 +261,7 @@ export type OrdersMarkFraudInput = z.infer<typeof ordersMarkFraudInputSchema>;
 // a prior GetOrders/GetOrder read).
 export const ordersDeleteInputSchema = z.object({
   orderid: idSchema,
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type OrdersDeleteInput = z.infer<typeof ordersDeleteInputSchema>;
 
@@ -277,7 +276,7 @@ export interface OrderToolDefinition {
   name: string;
   whmcsAction: string;
   tier: ToolTier;
-  schema: z.ZodTypeAny;
+  schema: z.ZodType;
 }
 
 export const ORDERS_TOOL_DEFINITIONS: readonly OrderToolDefinition[] = [

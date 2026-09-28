@@ -65,7 +65,7 @@ export const clientsGetServicesInputSchema = z
       .optional()
       .describe("Filter by the service's module username (WHMCS parameter name)."),
   })
-  .merge(paginationSchema)
+  .extend(paginationSchema.shape)
   .describe(
     "[read] GetClientsProducts — list or fetch client services. Service module " +
       "passwords are redacted by src/safety/redact.ts before results reach the model.",

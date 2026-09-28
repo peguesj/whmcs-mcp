@@ -117,7 +117,7 @@ export function serializeInvoiceLineItems(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   items.forEach((item, offset) => {
-    const n = startIndex + offset;
+    const n = String(startIndex + offset);
     out[`itemdescription${n}`] = item.description;
     out[`itemamount${n}`] = item.amount;
     if (item.taxed !== undefined) {
@@ -150,7 +150,7 @@ export type QuoteLineItem = z.infer<typeof quoteLineItemSchema>;
  */
 export function serializeQuoteLineItems(
   items: readonly QuoteLineItem[],
-): Array<Record<string, string | number | boolean>> {
+): Record<string, string | number | boolean>[] {
   return items.map((item) => {
     const row: Record<string, string | number | boolean> = {
       desc: item.desc,
@@ -406,7 +406,7 @@ export type QuotesListInput = z.infer<typeof quotesListInputSchema>;
 const quoteProspectSchema = z.object({
   firstname: z.string().min(1),
   lastname: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   companyname: z.string().optional(),
 });
 

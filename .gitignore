@@ -16,3 +16,7 @@ coverage/
 # Editor/OS cruft
 .DS_Store
 *.log
+
+# Local Claude Code agent/session runtime state (locks, audit logs, session
+# registries) -- never part of the published package.
+.claude/

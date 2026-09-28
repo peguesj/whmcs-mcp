@@ -28,318 +28,280 @@
  * with `identifier` + `secret` (+ optional `accesskey`) as body fields — there
  * is no bearer/header-based WHMCS REST API v1 in the documented 8.x/9.x
  * contract. All network I/O for this file goes through the shared
- * `WhmcsClient` in `../whmcs-client.js`, which owns that request shape; this
- * file only builds params and wires tiers/annotations. If a future WHMCS
- * release introduces a distinct bearer-token REST v1 surface, the one-line
- * fix point is `WhmcsClient`'s `AUTH_MODE` constant, not this file.
+ * `WhmcsClient` (reached via `ctx.whmcs.call(...)`), which owns that request
+ * shape; this file only builds params and wires tiers/annotations.
+ *
+ * Registration/tier/mode gating, dryRun short-circuiting, and the two-step
+ * confirm-token flow for billing/destructive tools are all handled centrally
+ * by `defineTool` (src/tools/registry.ts) — this file does not implement its
+ * own confirm-token store.
  */
 
-import { z } from "zod";
-import { defineTool } from "./registry.js";
-import type { WhmcsClient } from "../whmcs-client.js";
+import { defineTool, type ToolContext, type ToolHandlerResult } from "./registry.js";
+import type { WhmcsCallParams } from "../whmcs-client.js";
 import {
-  clientsGetServicesSchema,
-  clientsGetAddonsSchema,
-  productsListSchema,
-  productsGetPromotionsSchema,
-  servicesUpdateSchema,
-  servicesUpdateAddonSchema,
-  servicesUpgradeSchema,
-  serviceIdOnlySchema,
-  servicesModuleSuspendSchema,
+  clientsGetServicesInputSchema,
+  clientsGetAddonsInputSchema,
+  productsListInputSchema,
+  productsGetPromotionsInputSchema,
+  servicesUpdateInputSchema,
+  servicesUpdateAddonInputSchema,
+  servicesUpgradeInputSchema,
+  servicesModuleCreateInputSchema,
+  servicesModuleSuspendInputSchema,
+  servicesModuleUnsuspendInputSchema,
+  servicesModuleTerminateInputSchema,
+  servicesModuleChangePackageInputSchema,
 } from "../schemas/products.js";
 
-/**
- * Registers every products-domain tool on the given McpServer-compatible
- * registry, gated by the current WHMCS_MCP_MODE / enabled-domains policy
- * inside `defineTool`/`registry.ts`.
- */
-export function registerProductsTools(client: WhmcsClient): void {
-  // ---------------------------------------------------------------------
-  // Reads
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Reads
+// ---------------------------------------------------------------------------
 
-  defineTool({
-    name: "clients_get_services",
-    domain: "products",
-    tier: "read",
-    whmcsAction: "GetClientsProducts",
-    description:
-      "List a client's provisioned services/products (WHMCS GetClientsProducts). " +
-      "Service passwords and other secrets are redacted from the response.",
-    inputSchema: clientsGetServicesSchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
-    handler: async (input) => {
-      const result = await client.call("GetClientsProducts", input);
-      return { data: result, redact: ["password", "serverpassword", "cclastfour"] };
-    },
-  });
+defineTool({
+  name: "clients_get_services",
+  domain: "products",
+  tier: "read",
+  whmcsAction: "GetClientsProducts",
+  description:
+    "List a client's provisioned services/products (WHMCS GetClientsProducts). " +
+    "Service passwords and other secrets are redacted from the response.",
+  inputSchema: clientsGetServicesInputSchema,
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("GetClientsProducts", {
+      clientid: input.clientid,
+      serviceid: input.serviceid,
+      pid: input.pid,
+      domain: input.domain,
+      username2: input.username2,
+      limitstart: input.limitstart,
+      limitnum: input.limitnum,
+    });
+    return { data: result };
+  },
+});
 
-  defineTool({
-    name: "clients_get_addons",
-    domain: "products",
-    tier: "read",
-    whmcsAction: "GetClientsAddons",
-    description: "List addons attached to a client's service(s) (WHMCS GetClientsAddons).",
-    inputSchema: clientsGetAddonsSchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
-    handler: async (input) => {
-      const result = await client.call("GetClientsAddons", input);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "clients_get_addons",
+  domain: "products",
+  tier: "read",
+  whmcsAction: "GetClientsAddons",
+  description: "List addons attached to a client's service(s) (WHMCS GetClientsAddons).",
+  inputSchema: clientsGetAddonsInputSchema,
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("GetClientsAddons", {
+      clientid: input.clientid,
+      serviceid: input.serviceid,
+      addonid: input.addonid,
+    });
+    return { data: result };
+  },
+});
 
-  defineTool({
-    name: "products_list",
-    domain: "products",
-    tier: "read",
-    whmcsAction: "GetProducts",
-    description: "List products/services in the product catalog (WHMCS GetProducts).",
-    inputSchema: productsListSchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
-    handler: async (input) => {
-      const result = await client.call("GetProducts", input);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "products_list",
+  domain: "products",
+  tier: "read",
+  whmcsAction: "GetProducts",
+  description: "List products/services in the product catalog (WHMCS GetProducts).",
+  inputSchema: productsListInputSchema,
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const pid = Array.isArray(input.pid) ? input.pid.join(",") : input.pid;
+    const params: WhmcsCallParams = {
+      pid,
+      gid: input.gid,
+      module: input.module,
+    };
+    const result = await ctx.whmcs.call("GetProducts", params);
+    return { data: result };
+  },
+});
 
-  defineTool({
-    name: "products_get_promotions",
-    domain: "products",
-    tier: "read",
-    whmcsAction: "GetPromotions",
-    description: "List active promotions/discount codes (WHMCS GetPromotions).",
-    inputSchema: productsGetPromotionsSchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
-    handler: async (input) => {
-      const result = await client.call("GetPromotions", input);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "products_get_promotions",
+  domain: "products",
+  tier: "read",
+  whmcsAction: "GetPromotions",
+  description: "List active promotions/discount codes (WHMCS GetPromotions).",
+  inputSchema: productsGetPromotionsInputSchema,
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const params: WhmcsCallParams = { code: input.code };
+    const result = await ctx.whmcs.call("GetPromotions", params);
+    return { data: result };
+  },
+});
 
-  // ---------------------------------------------------------------------
-  // Writes (service field updates — not module lifecycle actions)
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Writes (service field updates — not module lifecycle actions)
+// ---------------------------------------------------------------------------
 
-  defineTool({
-    name: "services_update",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "UpdateClientProduct",
-    description:
-      "Update a client service's fields (status, billing, domain, notes, config options) " +
-      "via WHMCS UpdateClientProduct. Supports dryRun to validate without calling WHMCS.",
-    inputSchema: servicesUpdateSchema,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input) => {
-      const { dryRun, ...params } = input as z.infer<typeof servicesUpdateSchema>;
-      if (dryRun) {
-        return { data: { dryRun: true, wouldCall: "UpdateClientProduct", params } };
-      }
-      const result = await client.call("UpdateClientProduct", params);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "services_update",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "UpdateClientProduct",
+  description:
+    "Update a client service's fields (status, billing, domain, notes, config options) " +
+    "via WHMCS UpdateClientProduct. Supports dryRun to validate without calling WHMCS.",
+  inputSchema: servicesUpdateInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("UpdateClientProduct", {
+      serviceid: input.serviceid,
+      pid: input.pid,
+      status: input.status,
+      nextduedate: input.nextduedate,
+      billingcycle: input.billingcycle,
+      recurringamount: input.recurringamount,
+      domain: input.domain,
+      notes: input.notes,
+      customfields: input.customfields,
+      configoptions: input.configoptions,
+    });
+    return { data: result, summary: `Service ${String(input.serviceid)} updated.` };
+  },
+});
 
-  defineTool({
-    name: "services_update_addon",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "UpdateClientAddon",
-    description: "Update a client addon's fields via WHMCS UpdateClientAddon.",
-    inputSchema: servicesUpdateAddonSchema,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input) => {
-      const result = await client.call("UpdateClientAddon", input);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "services_update_addon",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "UpdateClientAddon",
+  description: "Update a client addon's fields via WHMCS UpdateClientAddon.",
+  inputSchema: servicesUpdateAddonInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("UpdateClientAddon", input);
+    return { data: result, summary: `Addon ${String(input.id)} updated.` };
+  },
+});
 
-  // ---------------------------------------------------------------------
-  // Billing-tier: product/config-option upgrade (confirm-gated)
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Billing-tier: product/config-option upgrade (confirm-gated)
+// ---------------------------------------------------------------------------
 
-  defineTool({
-    name: "services_upgrade",
-    domain: "products",
-    tier: "billing",
-    whmcsAction: "UpgradeProduct",
-    description:
-      "Price and optionally execute a product or config-option upgrade (WHMCS UpgradeProduct). " +
-      "Only advertised when WHMCS_MCP_MODE=full. First call without confirmToken (or with " +
-      "calconly=true) returns a priced preview and a confirmToken; the mutating call must " +
-      "echo that token within its TTL.",
-    inputSchema: servicesUpgradeSchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, dryRun, calconly, ...params } =
-        input as z.infer<typeof servicesUpgradeSchema>;
+defineTool({
+  name: "services_upgrade",
+  domain: "products",
+  tier: "billing",
+  whmcsAction: "UpgradeProduct",
+  description:
+    "Price and optionally execute a product or config-option upgrade (WHMCS UpgradeProduct). " +
+    "Only advertised when WHMCS_MCP_MODE=full. First call without confirmToken returns a priced " +
+    "preview and a confirmToken; the mutating call must echo that token within its TTL.",
+  inputSchema: servicesUpgradeInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("UpgradeProduct", {
+      serviceid: input.serviceid,
+      type: input.type,
+      newproductid: input.newproductid,
+      newproductbillingcycle: input.newproductbillingcycle,
+      configoptions: input.configoptions,
+      paymentmethod: input.paymentmethod,
+      promocode: input.promocode,
+      calconly: false,
+    });
+    return { data: result, summary: `Service ${String(input.serviceid)} upgrade executed.` };
+  },
+  buildConfirmationPreview: (input) =>
+    `This will ${input.type === "product" ? `change service ${String(input.serviceid)} to a new product/package` : `change service ${String(input.serviceid)}'s config options`} and generate an upgrade order/invoice.`,
+});
 
-      // Preview path: always safe, never mutates, never requires a token.
-      if (calconly || dryRun) {
-        const preview = await client.call("UpgradeProduct", { ...params, calconly: true });
-        return {
-          data: preview,
-          preview: true,
-          confirmToken: ctx.issueConfirmToken({ tool: "services_upgrade", params }),
-        };
-      }
+// ---------------------------------------------------------------------------
+// Module lifecycle actions (write/destructive, all confirm-gated)
+// ---------------------------------------------------------------------------
 
-      ctx.requireConfirmToken(confirmToken, { tool: "services_upgrade", params });
-      const result = await client.call("UpgradeProduct", { ...params, calconly: false });
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "services_module_create",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "ModuleCreate",
+  description:
+    "Run the provisioning module's create action for a service (WHMCS ModuleCreate). " +
+    "Requires confirmToken from a prior preview call.",
+  inputSchema: servicesModuleCreateInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("ModuleCreate", { serviceid: input.serviceid });
+    return { data: result, summary: `Module create run for service ${String(input.serviceid)}.` };
+  },
+  buildConfirmationPreview: (input) => `This will run the provisioning module's create action for service ${String(input.serviceid)}.`,
+});
 
-  // ---------------------------------------------------------------------
-  // Module lifecycle actions (write/destructive, all confirm-gated)
-  // ---------------------------------------------------------------------
+defineTool({
+  name: "services_module_suspend",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "ModuleSuspend",
+  description:
+    "Run the provisioning module's suspend action for a service (WHMCS ModuleSuspend). " +
+    "Requires confirmToken from a prior preview call.",
+  inputSchema: servicesModuleSuspendInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("ModuleSuspend", {
+      serviceid: input.serviceid,
+      suspendreason: input.suspendreason,
+    });
+    return { data: result, summary: `Module suspend run for service ${String(input.serviceid)}.` };
+  },
+  buildConfirmationPreview: (input) => `This will run the provisioning module's suspend action for service ${String(input.serviceid)}.`,
+});
 
-  defineTool({
-    name: "services_module_create",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "ModuleCreate",
-    description:
-      "Run the provisioning module's create action for a service (WHMCS ModuleCreate). " +
-      "Requires confirmToken from a prior preview call.",
-    inputSchema: serviceIdOnlySchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, serviceid } = input as z.infer<typeof serviceIdOnlySchema> & {
-        confirmToken?: string;
-      };
-      if (!confirmToken) {
-        return {
-          preview: true,
-          data: { action: "ModuleCreate", serviceid },
-          confirmToken: ctx.issueConfirmToken({ tool: "services_module_create", serviceid }),
-        };
-      }
-      ctx.requireConfirmToken(confirmToken, { tool: "services_module_create", serviceid });
-      const result = await client.call("ModuleCreate", { serviceid });
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "services_module_unsuspend",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "ModuleUnsuspend",
+  description:
+    "Run the provisioning module's unsuspend action for a service (WHMCS ModuleUnsuspend). " +
+    "Requires confirmToken from a prior preview call.",
+  inputSchema: servicesModuleUnsuspendInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("ModuleUnsuspend", { serviceid: input.serviceid });
+    return { data: result, summary: `Module unsuspend run for service ${String(input.serviceid)}.` };
+  },
+  buildConfirmationPreview: (input) => `This will run the provisioning module's unsuspend action for service ${String(input.serviceid)}.`,
+});
 
-  defineTool({
-    name: "services_module_suspend",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "ModuleSuspend",
-    description:
-      "Run the provisioning module's suspend action for a service (WHMCS ModuleSuspend). " +
-      "Requires confirmToken from a prior preview call.",
-    inputSchema: servicesModuleSuspendSchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, ...params } = input as z.infer<
-        typeof servicesModuleSuspendSchema
-      > & { confirmToken?: string };
-      if (!confirmToken) {
-        return {
-          preview: true,
-          data: { action: "ModuleSuspend", ...params },
-          confirmToken: ctx.issueConfirmToken({ tool: "services_module_suspend", params }),
-        };
-      }
-      ctx.requireConfirmToken(confirmToken, { tool: "services_module_suspend", params });
-      const result = await client.call("ModuleSuspend", params);
-      return { data: result };
-    },
-  });
+defineTool({
+  name: "services_module_terminate",
+  domain: "products",
+  tier: "destructive",
+  whmcsAction: "ModuleTerminate",
+  description:
+    "Run the provisioning module's terminate action for a service (WHMCS ModuleTerminate). " +
+    "Destructive and irreversible at the module/provider layer. Requires confirmToken from " +
+    "a prior preview call.",
+  inputSchema: servicesModuleTerminateInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("ModuleTerminate", { serviceid: input.serviceid });
+    return { data: result, summary: `Module terminate run for service ${String(input.serviceid)}.` };
+  },
+  buildConfirmationPreview: (input) =>
+    `This will run the provisioning module's terminate action for service ${String(input.serviceid)}. This is irreversible at the module/provider layer.`,
+});
 
-  defineTool({
-    name: "services_module_unsuspend",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "ModuleUnsuspend",
-    description:
-      "Run the provisioning module's unsuspend action for a service (WHMCS ModuleUnsuspend). " +
-      "Requires confirmToken from a prior preview call.",
-    inputSchema: serviceIdOnlySchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, serviceid } = input as z.infer<typeof serviceIdOnlySchema> & {
-        confirmToken?: string;
-      };
-      if (!confirmToken) {
-        return {
-          preview: true,
-          data: { action: "ModuleUnsuspend", serviceid },
-          confirmToken: ctx.issueConfirmToken({ tool: "services_module_unsuspend", serviceid }),
-        };
-      }
-      ctx.requireConfirmToken(confirmToken, { tool: "services_module_unsuspend", serviceid });
-      const result = await client.call("ModuleUnsuspend", { serviceid });
-      return { data: result };
-    },
-  });
-
-  defineTool({
-    name: "services_module_terminate",
-    domain: "products",
-    tier: "destructive",
-    whmcsAction: "ModuleTerminate",
-    description:
-      "Run the provisioning module's terminate action for a service (WHMCS ModuleTerminate). " +
-      "Destructive and irreversible at the module/provider layer. Requires confirmToken from " +
-      "a prior preview call.",
-    inputSchema: serviceIdOnlySchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, serviceid } = input as z.infer<typeof serviceIdOnlySchema> & {
-        confirmToken?: string;
-      };
-      if (!confirmToken) {
-        return {
-          preview: true,
-          data: { action: "ModuleTerminate", serviceid, warning: "irreversible" },
-          confirmToken: ctx.issueConfirmToken({ tool: "services_module_terminate", serviceid }),
-        };
-      }
-      ctx.requireConfirmToken(confirmToken, { tool: "services_module_terminate", serviceid });
-      const result = await client.call("ModuleTerminate", { serviceid });
-      return { data: result };
-    },
-  });
-
-  defineTool({
-    name: "services_module_change_package",
-    domain: "products",
-    tier: "write",
-    whmcsAction: "ModuleChangePackage",
-    description:
-      "Run the provisioning module's change-package action for a service " +
-      "(WHMCS ModuleChangePackage). Requires confirmToken from a prior preview call.",
-    inputSchema: serviceIdOnlySchema,
-    requiresConfirm: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    handler: async (input, ctx) => {
-      const { confirmToken, serviceid } = input as z.infer<typeof serviceIdOnlySchema> & {
-        confirmToken?: string;
-      };
-      if (!confirmToken) {
-        return {
-          preview: true,
-          data: { action: "ModuleChangePackage", serviceid },
-          confirmToken: ctx.issueConfirmToken({
-            tool: "services_module_change_package",
-            serviceid,
-          }),
-        };
-      }
-      ctx.requireConfirmToken(confirmToken, {
-        tool: "services_module_change_package",
-        serviceid,
-      });
-      const result = await client.call("ModuleChangePackage", { serviceid });
-      return { data: result };
-    },
-  });
-}
+defineTool({
+  name: "services_module_change_package",
+  domain: "products",
+  tier: "write",
+  whmcsAction: "ModuleChangePackage",
+  description:
+    "Run the provisioning module's change-package action for a service " +
+    "(WHMCS ModuleChangePackage). Requires confirmToken from a prior preview call.",
+  inputSchema: servicesModuleChangePackageInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const result = await ctx.whmcs.call("ModuleChangePackage", { serviceid: input.serviceid });
+    return { data: result, summary: `Module change-package run for service ${String(input.serviceid)}.` };
+  },
+  buildConfirmationPreview: (input) => `This will run the provisioning module's change-package action for service ${String(input.serviceid)}.`,
+});

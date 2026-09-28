@@ -1,4 +1,4 @@
-# @peguesj/whmcs-mcp
+# whmcs-bridge-mcp
 
 An MCP (Model Context Protocol) server for the [WHMCS External API](https://developers.whmcs.com/api-reference/) — built for safe production use, not just convenience.
 
@@ -6,26 +6,12 @@ Read-only by default. Write actions are opt-in per domain. Billing and destructi
 
 Tested against the WHMCS 8.12.x and 9.0.x External API contract (action names and parameters are unchanged across that range).
 
-## Why a new one
-
-Several WHMCS MCP servers already exist. None combines an open MIT license, a TypeScript/npm-native implementation, typed per-action zod schemas, and a tiered safety model in one place:
-
-| Project | License | Language | Notes |
-|---|---|---|---|
-| [`theorigamicorporation/toc-whmcs-mcp`](https://github.com/theorigamicorporation/toc-whmcs-mcp) | AGPL-3.0 | Go | Closest in spirit — read-only default, confirmation-gated mutations, redacted output, ~15-25 tools advertised per profile out of 162 documented actions. We borrowed the "small advertised tool list" idea. |
-| [`daddariotech/whmcs-mcp`](https://github.com/daddariotech/whmcs-mcp) | Commercial | TypeScript | 98 tools, `dryRun` everywhere, documents minimum API-role permission per tool, requires a paid license key. We borrowed the per-tool permission docs and `dryRun` pattern, but stay fully open source. |
-| [`caioldcarvalho/whmcs-mcp`](https://github.com/caioldcarvalho/whmcs-mcp) (npm `whmcs-mcp`) | MIT | TypeScript | 34 tools, no tiered safety model. Holds the unscoped npm name, which is why we publish as `@peguesj/whmcs-mcp`. |
-| [`not-sure-w/whmcs-mcp-server`](https://github.com/not-sure-w/whmcs-mcp-server) (npm `whmcs-mcp-server`) | ISC | TypeScript | 60+ tools, last published 2026-04. Holds the `whmcs-mcp-server` npm name. |
-| [`scarecr0w12/whmcs-mcp-tool`](https://github.com/scarecr0w12/whmcs-mcp-tool) | MIT | — | Most-starred of the group; ships CI, a GHCR Docker image, and a generated `docs/API_REFERENCE.md`. We borrowed the Docker/GHCR distribution and generated-reference pattern. |
-
-This project differentiates on **safety posture** (tiered mode matrix, confirm-token flow, deep redaction), **license** (MIT, no paid tier), **typed schemas** (one zod schema per WHMCS action, not a generic dispatcher), **version awareness** (runtime `WhmcsDetails` check), and **documentation quality** (generated tool reference, marketing site with real usage examples against mock data).
-
 ## Install
 
 ```bash
-npm install -g @peguesj/whmcs-mcp
+npm install -g whmcs-bridge-mcp
 # or run without installing:
-npx @peguesj/whmcs-mcp
+npx whmcs-bridge-mcp
 ```
 
 ### Claude Desktop / Claude Code
@@ -35,7 +21,7 @@ npx @peguesj/whmcs-mcp
   "mcpServers": {
     "whmcs": {
       "command": "npx",
-      "args": ["-y", "@peguesj/whmcs-mcp"],
+      "args": ["-y", "whmcs-bridge-mcp"],
       "env": {
         "WHMCS_API_URL": "https://your-whmcs-install.example.com/includes/api.php",
         "WHMCS_API_IDENTIFIER": "your-api-identifier",
@@ -87,6 +73,29 @@ And every deployment has a **mode**, set via `WHMCS_MCP_MODE`:
 
 `WHMCS_MCP_ENABLE_DOMAINS` (comma-separated: `tickets,clients,products,invoices,domains,orders,system`) further narrows which domains' tools are registered at all, independent of mode.
 
+```mermaid
+flowchart LR
+    subgraph Tiers
+        R[read]
+        W[write]
+        B[billing]
+        D[destructive]
+    end
+    subgraph Modes
+        RO[readonly<br/>default]
+        WM[write]
+        FM[full]
+    end
+    RO -->|advertises| R
+    WM -->|advertises| R
+    WM -->|advertises| W
+    WM -->|advertises, confirm required| D
+    FM -->|advertises| R
+    FM -->|advertises| W
+    FM -->|advertises, confirm required| B
+    FM -->|advertises, confirm required| D
+```
+
 **Two-step confirmation** (`billing` and `destructive` tiers): the first call to a gated tool returns a human-readable preview plus a short-lived, single-use `confirmToken` (HMAC-signed, 5-minute TTL, bound to the tool name and a hash of its arguments). The caller must repeat the call with that exact token to execute. Every mutating tool also accepts `dryRun: true`, which returns the same preview and makes no network call at all — no token needed, no state changed.
 
 **Redaction** runs on every response and on error messages before they leave the process: API secrets, session/access keys, stored passwords, full card and bank account numbers, CVV, and EPP transfer codes are always stripped. Email, phone, and address fields are redacted when `WHMCS_MCP_REDACT_PII=true` (the recommended default for any shared or logged transcript).
@@ -94,6 +103,65 @@ And every deployment has a **mode**, set via `WHMCS_MCP_MODE`:
 **Operator policy note:** this project ships with the invoice-mutating tools (`billing_create_invoice`, `billing_update_invoice`, `billing_add_payment`, `billing_apply_credit`, `billing_capture_payment`) in the `billing` tier specifically so an operator can enforce "no agent writes to WHMCS invoices" by simply never setting `WHMCS_MCP_MODE=full`. Do not enable `full` mode in a deployment where invoice mutation must stay human-only.
 
 See [`SECURITY.md`](./SECURITY.md) for the full threat model and the recommended least-privilege WHMCS API role.
+
+### Example: a billing/destructive call through an agent harness
+
+The sequence below shows a harness-driven agent (any orchestrator that spawns subagents against this
+MCP server — the example uses an `ecc`-style agent config) walking a `billing`-tier tool through the
+confirm-token flow. The agent never mutates state on the first call; it only mutates after echoing back
+the exact `confirmToken` it was handed.
+
+```mermaid
+sequenceDiagram
+    participant Agent as Harness agent (ecc)
+    participant MCP as whmcs-bridge-mcp
+    participant WHMCS as WHMCS External API
+
+    Agent->>MCP: billing_apply_credit(clientid, amount, description)
+    Note over MCP: tier=billing, no confirmToken present
+    MCP-->>Agent: preview + confirmToken (5m TTL, single-use)
+    Agent->>Agent: surface preview to operator / policy check
+    Agent->>MCP: billing_apply_credit(..., confirmToken)
+    Note over MCP: token verified, matches tool+args hash
+    MCP->>WHMCS: AddCredit
+    WHMCS-->>MCP: result=success
+    MCP-->>Agent: structuredContent (redacted)
+```
+
+Registering the server under an `ecc`-family harness config looks the same as any other MCP client —
+add it once per project or globally, then reference its tools by name from an agent definition:
+
+```jsonc
+// .claude/settings.json (or wherever your harness reads MCP server config)
+{
+  "mcpServers": {
+    "whmcs": {
+      "command": "npx",
+      "args": ["-y", "whmcs-bridge-mcp"],
+      "env": {
+        "WHMCS_API_URL": "https://your-whmcs-install.example.com/includes/api.php",
+        "WHMCS_API_IDENTIFIER": "your-api-identifier",
+        "WHMCS_API_SECRET": "your-api-secret",
+        "WHMCS_MCP_MODE": "readonly"
+      }
+    }
+  }
+}
+```
+
+```markdown
+<!-- an ecc-style agent definition scoping which tools it may call -->
+---
+name: whmcs-ticket-triage
+description: Read-only ticket triage. Never enables write/billing/destructive tools.
+tools: mcp__whmcs__tickets_list, mcp__whmcs__tickets_get, mcp__whmcs__tickets_get_predefined_replies
+model: haiku
+---
+```
+
+Keep write/billing/destructive tools out of a read-only agent's `tools:` allowlist even when the
+server itself is running in a more permissive mode elsewhere — the mode/domain gates above are the
+server's own defense-in-depth, not a substitute for scoping what each agent can reach.
 
 ## Configuration
 
@@ -146,6 +214,13 @@ Example of a confirm-gated mutation:
 { "name": "tickets_delete", "arguments": { "ticketid": 4821, "confirmToken": "eyJ..." } }
 ```
 
+## Versioning
+
+This repo tags atomically: every commit (via a `post-commit` git hook in `.githooks/`) bumps
+`package.json`'s MINOR version and creates an annotated `vX.Y.0` tag on the resulting version-bump
+commit. Hooks wire themselves up automatically on `npm install` (via the `prepare` script setting
+`git config core.hooksPath .githooks`); no manual setup is needed after cloning.
+
 ## Development
 
 ```bash
@@ -175,6 +250,20 @@ The image is a multi-stage build onto a distroless Node runtime, running as a no
 ## Security
 
 See [`SECURITY.md`](./SECURITY.md) for the threat model, the recommended least-privilege WHMCS API role, the billing-tier policy, and how to report a vulnerability.
+
+## Acknowledgments
+
+Several WHMCS MCP servers already existed before this one; each contributed an idea worth borrowing:
+
+| Project | License | Language | Notes |
+|---|---|---|---|
+| [`theorigamicorporation/toc-whmcs-mcp`](https://github.com/theorigamicorporation/toc-whmcs-mcp) | AGPL-3.0 | Go | Closest in spirit — read-only default, confirmation-gated mutations, redacted output, ~15-25 tools advertised per profile out of 162 documented actions. We borrowed the "small advertised tool list" idea. |
+| [`daddariotech/whmcs-mcp`](https://github.com/daddariotech/whmcs-mcp) | Commercial | TypeScript | 98 tools, `dryRun` everywhere, documents minimum API-role permission per tool, requires a paid license key. We borrowed the per-tool permission docs and `dryRun` pattern, but stay fully open source. |
+| [`caioldcarvalho/whmcs-mcp`](https://github.com/caioldcarvalho/whmcs-mcp) (npm `whmcs-mcp`) | MIT | TypeScript | 34 tools, no tiered safety model. Holds the unscoped npm name, which is why we publish as `whmcs-bridge-mcp`. |
+| [`not-sure-w/whmcs-mcp-server`](https://github.com/not-sure-w/whmcs-mcp-server) (npm `whmcs-mcp-server`) | ISC | TypeScript | 60+ tools, last published 2026-04. Holds the `whmcs-mcp-server` npm name. |
+| [`scarecr0w12/whmcs-mcp-tool`](https://github.com/scarecr0w12/whmcs-mcp-tool) | MIT | — | Most-starred of the group; ships CI, a GHCR Docker image, and a generated `docs/API_REFERENCE.md`. We borrowed the Docker/GHCR distribution and generated-reference pattern. |
+
+This project differentiates on **safety posture** (tiered mode matrix, confirm-token flow, deep redaction), **license** (MIT, no paid tier), **typed schemas** (one zod schema per WHMCS action, not a generic dispatcher), **version awareness** (runtime `WhmcsDetails` check), and an **extensible custom-action layer** for operator-defined tools outside the built-in domain set.
 
 ## License
 

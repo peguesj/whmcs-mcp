@@ -29,8 +29,7 @@ import { z } from "zod";
 
 import {
   clientIdSchema,
-  confirmTokenSchema,
-  dryRunSchema,
+  confirmFields,
   emailSchema,
   iso2CountrySchema,
   limitNumSchema,
@@ -61,6 +60,7 @@ export const clientsListInputSchema = z.object({
   /** Column to sort by, e.g. "id", "firstname", "email", "signupdate". */
   orderby: z.string().trim().min(1).optional(),
   sorting: sortDirectionSchema.optional(),
+  ...confirmFields,
 });
 export type ClientsListInput = z.infer<typeof clientsListInputSchema>;
 
@@ -74,6 +74,7 @@ export const clientsGetInputSchema = z
     email: emailSchema.optional(),
     /** Include service/domain/invoice/ticket counts and financial stats. */
     stats: z.boolean().optional(),
+    ...confirmFields,
   })
   .refine((v) => v.clientid !== undefined || v.email !== undefined, {
     message: "Provide either clientid or email to identify the client.",
@@ -112,7 +113,7 @@ export const clientsCreateInputSchema = z.object({
   skipvalidation: z.boolean().optional(),
   /** Suppress the "New Account" welcome email. */
   noemail: z.boolean().optional(),
-  dryRun: dryRunSchema,
+  ...confirmFields,
 });
 export type ClientsCreateInput = z.infer<typeof clientsCreateInputSchema>;
 
@@ -152,7 +153,7 @@ export const clientsUpdateInputSchema = z
     /** Remove any stored credit-card/paymethod token on file. */
     clearcreditcard: z.boolean().optional(),
     customfields: z.record(z.string(), z.string()).optional(),
-    dryRun: dryRunSchema,
+    ...confirmFields,
   })
   .refine((v) => v.clientid !== undefined || v.clientemail !== undefined, {
     message: "Provide either clientid or clientemail to identify the client.",
@@ -167,12 +168,12 @@ export type ClientsUpdateInput = z.infer<typeof clientsUpdateInputSchema>;
 export const clientsCloseInputSchema = z.object({
   clientid: clientIdSchema,
   /**
-   * Two-step confirmation token from src/safety/confirm.ts. Omitted on the
-   * first (preview) call; required, and must match the hash of this same
-   * tool+args pair, on the executing call. See src/safety/confirm.ts for
-   * the HMAC/TTL scheme.
+   * `dryRun` and `confirmToken` are the MCP-server-local safety fields from
+   * src/safety/confirm.ts. `confirmToken` is omitted on the first (preview)
+   * call; required, and must match the hash of this same tool+args pair, on
+   * the executing call. See src/safety/confirm.ts for the HMAC/TTL scheme.
    */
-  confirmToken: confirmTokenSchema.optional(),
+  ...confirmFields,
 });
 export type ClientsCloseInput = z.infer<typeof clientsCloseInputSchema>;
 
@@ -188,6 +189,7 @@ export const clientsGetContactsInputSchema = z.object({
   email: emailSchema.optional(),
   limitstart: limitStartSchema.optional(),
   limitnum: limitNumSchema.optional(),
+  ...confirmFields,
 });
 export type ClientsGetContactsInput = z.infer<typeof clientsGetContactsInputSchema>;
 
@@ -224,6 +226,7 @@ export const clientsAddContactInputSchema = z.object({
   emailoptin_invoices: z.boolean().optional(),
   emailoptin_support: z.boolean().optional(),
   emailoptin_affiliates: z.boolean().optional(),
+  ...confirmFields,
 });
 export type ClientsAddContactInput = z.infer<typeof clientsAddContactInputSchema>;
 
@@ -251,6 +254,7 @@ export const clientsUpdateContactInputSchema = z.object({
   emailoptin_invoices: z.boolean().optional(),
   emailoptin_support: z.boolean().optional(),
   emailoptin_affiliates: z.boolean().optional(),
+  ...confirmFields,
 });
 export type ClientsUpdateContactInput = z.infer<typeof clientsUpdateContactInputSchema>;
 
@@ -268,6 +272,7 @@ export const clientsGetEmailsInputSchema = z.object({
   subject: z.string().trim().min(1).optional(),
   limitstart: limitStartSchema.optional(),
   limitnum: limitNumSchema.optional(),
+  ...confirmFields,
 });
 export type ClientsGetEmailsInput = z.infer<typeof clientsGetEmailsInputSchema>;
 
@@ -275,5 +280,5 @@ export type ClientsGetEmailsInput = z.infer<typeof clientsGetEmailsInputSchema>;
  * clients_get_groups -> WHMCS action: GetClientGroups
  * ---------------------------------------------------------------------- */
 
-export const clientsGetGroupsInputSchema = z.object({});
+export const clientsGetGroupsInputSchema = z.object({ ...confirmFields });
 export type ClientsGetGroupsInput = z.infer<typeof clientsGetGroupsInputSchema>;

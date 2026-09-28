@@ -36,10 +36,14 @@
  */
 
 import { z } from "zod";
+import { confirmFields } from "./common.js";
 
 // ---------------------------------------------------------------------------
-// Shared primitives (kept local to this file; not yet factored into
-// ./common.ts, which is owned by a different file in this plan)
+// Shared primitives (kept local to this file: these need `z.coerce` to accept
+// either a string or number over the wire, which common.ts's `idSchema` /
+// `limitstartSchema` / `limitnumSchema` do not do. The safety-layer fields
+// (`dryRun`/`confirmToken`) are NOT duplicated here — every tool schema below
+// spreads the canonical `confirmFields` from ./common.js instead.)
 // ---------------------------------------------------------------------------
 
 /** WHMCS numeric identifiers are passed as strings or numbers; accept both, coerce to a positive int. */
@@ -48,27 +52,6 @@ const idSchema = z.coerce.number().int().positive();
 /** Pagination shared by WHMCS list-style actions. WHMCS caps limitnum at 250. */
 const limitstartSchema = z.coerce.number().int().min(0).optional();
 const limitnumSchema = z.coerce.number().int().min(1).max(250).optional();
-
-/** Dry-run flag on every mutating tool: when true, the tool validates input and returns a preview with no network call. */
-const dryRunSchema = z
-  .boolean()
-  .optional()
-  .describe(
-    "When true, validate input and return a preview only; no WHMCS API call is made.",
-  );
-
-/**
- * Two-step confirmation token for billing/destructive-tier tools. The first
- * call (confirmToken omitted) returns a preview plus a short-lived,
- * single-use token; the second call must echo it back to proceed.
- */
-const confirmTokenSchema = z
-  .string()
-  .min(1)
-  .optional()
-  .describe(
-    "Echo the confirmToken returned by this tool's preview call to execute the action. Omit to receive a preview.",
-  );
 
 /** A bare domain name, e.g. "example.com". Loose validation; WHMCS is the source of truth. */
 const domainNameSchema = z
@@ -130,8 +113,7 @@ export const domainsUpdateNameserversSchema = z
     ns3: nameserverSchema.optional(),
     ns4: nameserverSchema.optional(),
     ns5: nameserverSchema.optional(),
-    dryRun: dryRunSchema,
-    confirmToken: confirmTokenSchema,
+    ...confirmFields,
   })
   .refine((v) => v.domainid !== undefined || v.domain !== undefined, {
     message: "One of domainid or domain is required",
@@ -159,8 +141,7 @@ export type DomainsGetLockingStatusInput = z.infer<
 export const domainsUpdateLockingStatusSchema = z.object({
   domainid: idSchema,
   lockstatus: z.boolean(),
-  dryRun: dryRunSchema,
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type DomainsUpdateLockingStatusInput = z.infer<
   typeof domainsUpdateLockingStatusSchema
@@ -205,7 +186,7 @@ export const domainsUpdateSchema = z.object({
   idprotection: z.boolean().optional(),
   donotrenew: z.boolean().optional(),
   notes: z.string().optional(),
-  dryRun: dryRunSchema,
+  ...confirmFields,
 });
 export type DomainsUpdateInput = z.infer<typeof domainsUpdateSchema>;
 
@@ -220,8 +201,7 @@ export const domainsRenewSchema = z
     domainid: idSchema.optional(),
     domain: domainNameSchema.optional(),
     regperiod: z.coerce.number().int().min(1).max(10).optional(),
-    dryRun: dryRunSchema,
-    confirmToken: confirmTokenSchema,
+    ...confirmFields,
   })
   .refine((v) => v.domainid !== undefined || v.domain !== undefined, {
     message: "One of domainid or domain is required",
@@ -238,8 +218,7 @@ export const domainsRegisterSchema = z
     domainid: idSchema.optional(),
     domain: domainNameSchema.optional(),
     idnlanguage: z.string().max(16).optional(),
-    dryRun: dryRunSchema,
-    confirmToken: confirmTokenSchema,
+    ...confirmFields,
   })
   .refine((v) => v.domainid !== undefined || v.domain !== undefined, {
     message: "One of domainid or domain is required",
@@ -262,8 +241,7 @@ export const domainsTransferSchema = z
       .min(1)
       .optional()
       .describe("EPP/auth transfer code. Never logged; redacted from all output."),
-    dryRun: dryRunSchema,
-    confirmToken: confirmTokenSchema,
+    ...confirmFields,
   })
   .refine((v) => v.domainid !== undefined || v.domain !== undefined, {
     message: "One of domainid or domain is required",

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "myaddon_get_widget_status",
+    "domain": "custom",
+    "tier": "read",
+    "whmcsAction": "MyAddonGetWidgetStatus",
+    "description": "Get widget status from the MyAddon module.",
+    "params": {
+      "widgetId": { "type": "string", "required": true },
+      "verbose": { "type": "boolean", "required": false }
+    }
+  },
+  {
+    "name": "myaddon_reset_widget",
+    "domain": "custom",
+    "tier": "write",
+    "whmcsAction": "MyAddonResetWidget",
+    "description": "Reset a widget in the MyAddon module.",
+    "params": {
+      "widgetId": { "type": "string", "required": true }
+    }
+  }
+]

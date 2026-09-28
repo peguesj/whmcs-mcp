@@ -1,0 +1,3933 @@
+{
+  "generatedAt": "2026-09-28T20:19:28.556Z",
+  "totalTools": 84,
+  "domains": [
+    "clients",
+    "domains",
+    "invoices",
+    "orders",
+    "products",
+    "system",
+    "tickets"
+  ],
+  "tools": [
+    {
+      "name": "clients_get",
+      "domain": "clients",
+      "tier": "read",
+      "whmcsAction": "GetClientsDetails",
+      "description": "Fetches full details for one WHMCS client by clientid or email. Set stats:true to also include service/order/domain/ticket/invoice counts.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "stats",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_get_contacts",
+      "domain": "clients",
+      "tier": "read",
+      "whmcsAction": "GetContacts",
+      "description": "Lists sub-account contacts for a client, or searches contacts across clients by name/email.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "firstname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "lastname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_get_emails",
+      "domain": "clients",
+      "tier": "read",
+      "whmcsAction": "GetEmails",
+      "description": "Lists emails WHMCS has sent to a client's account, optionally filtered by date or subject.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_get_groups",
+      "domain": "clients",
+      "tier": "read",
+      "whmcsAction": "GetClientGroups",
+      "description": "Lists the client groups configured in WHMCS. No inputs.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_list",
+      "domain": "clients",
+      "tier": "read",
+      "whmcsAction": "GetClients",
+      "description": "Lists WHMCS client accounts, with optional free-text search, status filter, and pagination.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "search",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Active\", \"Inactive\", \"Closed\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        },
+        {
+          "name": "orderby",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "sorting",
+          "type": "enum (\"ASC\", \"DESC\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_add_contact",
+      "domain": "clients",
+      "tier": "write",
+      "whmcsAction": "AddContact",
+      "description": "Adds a sub-account contact to a WHMCS client, with optional permission flags and email preferences.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "firstname",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "lastname",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "phonenumber",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "permissions",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_general",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_products",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_domains",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_invoices",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_support",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_affiliates",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_create",
+      "domain": "clients",
+      "tier": "write",
+      "whmcsAction": "AddClient",
+      "description": "Creates a new WHMCS client account.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "firstname",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "lastname",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "address1",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "city",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "postcode",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "country",
+          "type": "enum",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code, e.g. US."
+        },
+        {
+          "name": "phonenumber",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "companyname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "currency",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "groupid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "customfields",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "skipvalidation",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_update",
+      "domain": "clients",
+      "tier": "write",
+      "whmcsAction": "UpdateClient",
+      "description": "Updates fields on an existing WHMCS client, identified by clientid or clientemail.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clientemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "firstname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "lastname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "companyname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "address1",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "address2",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "city",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "postcode",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "country",
+          "type": "enum",
+          "required": false,
+          "description": "ISO 3166-1 alpha-2 country code, e.g. US."
+        },
+        {
+          "name": "phonenumber",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Active\", \"Inactive\", \"Closed\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "groupid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "credit",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clearcreditcard",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "customfields",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_update_contact",
+      "domain": "clients",
+      "tier": "write",
+      "whmcsAction": "UpdateContact",
+      "description": "Updates fields on an existing sub-account contact, identified by contactid.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "contactid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "firstname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "lastname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "phonenumber",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "companyname",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "address1",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "address2",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "city",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "postcode",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "country",
+          "type": "enum",
+          "required": false,
+          "description": "ISO 3166-1 alpha-2 country code, e.g. US."
+        },
+        {
+          "name": "permissions",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_general",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_products",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_domains",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_invoices",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_support",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailoptin_affiliates",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_close",
+      "domain": "clients",
+      "tier": "destructive",
+      "whmcsAction": "CloseClient",
+      "description": "Closes a WHMCS client account. Irreversible via the API. Two-step confirm-gated: call once without confirmToken to preview and receive a token, then call again with the same clientid and that confirmToken to execute.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_get_locking_status",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "DomainGetLockingStatus",
+      "description": "Returns whether a domain currently has the registrar transfer lock enabled.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_get_nameservers",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "DomainGetNameservers",
+      "description": "Returns the current nameservers (ns1-ns5) configured for a domain.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_get_tld_pricing",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "GetTLDPricing",
+      "description": "Returns register/transfer/renew pricing per TLD, optionally for a specific currency or client's pricing group.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "currencyid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_get_whois_info",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "DomainGetWhoisInfo",
+      "description": "Returns the Registrant/Admin/Technical/Billing WHOIS contact records on file for a domain. Contact PII (email, phone, fax, address) is masked unless WHMCS_MCP_REDACT_PII=false.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_list",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "GetClientsDomains",
+      "description": "Lists domains under management in WHMCS, optionally filtered by client, domain id, or domain name.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_whois_availability",
+      "domain": "domains",
+      "tier": "read",
+      "whmcsAction": "DomainWhois",
+      "description": "Runs a live WHOIS availability/status lookup for a domain name via the connected WHMCS instance's registrar configuration.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "domains_update",
+      "domain": "domains",
+      "tier": "write",
+      "whmcsAction": "UpdateClientDomain",
+      "description": "Updates a domain's WHMCS record: status, renewal date/amount, renewal period, autorecalc, DNS management/email forwarding/ID protection add-on flags, do-not-renew, and notes. Pass dryRun:true to validate and preview without calling WHMCS.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Pending\", \"Active\", \"Expired\", \"Cancelled\", \"Fraud\", \"Transferred Away\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "nextduedate",
+          "type": "enum",
+          "required": false,
+          "description": "YYYY-MM-DD"
+        },
+        {
+          "name": "expirydate",
+          "type": "enum",
+          "required": false,
+          "description": "YYYY-MM-DD"
+        },
+        {
+          "name": "regperiod",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "recurringamount",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "autorecalc",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dnsmanagement",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "emailforwarding",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "idprotection",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "donotrenew",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_update_locking_status",
+      "domain": "domains",
+      "tier": "write",
+      "whmcsAction": "DomainUpdateLockingStatus",
+      "description": "Enables or disables the registrar transfer lock on a domain. Two-step confirm: call once to preview, then again with the returned confirmToken to apply. Pass dryRun:true to only preview.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "lockstatus",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_update_nameservers",
+      "domain": "domains",
+      "tier": "write",
+      "whmcsAction": "DomainUpdateNameservers",
+      "description": "Updates a domain's nameservers at the registrar. Requires domainid or domain, plus ns1/ns2 (ns3-ns5 optional). Two-step confirm: call once to preview, then again with the returned confirmToken to apply. Pass dryRun:true to only validate and preview.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ns1",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "ns2",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "ns3",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ns4",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ns5",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_register",
+      "domain": "domains",
+      "tier": "billing",
+      "whmcsAction": "DomainRegister",
+      "description": "Registers a pending domain order at the registrar. Billing-tier: only available when WHMCS_MCP_MODE=full. Two-step confirm required; pass dryRun:true to only preview.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "idnlanguage",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_renew",
+      "domain": "domains",
+      "tier": "billing",
+      "whmcsAction": "DomainRenew",
+      "description": "Renews a domain at the registrar for the given period, generating a renewal invoice. Billing-tier: only available when WHMCS_MCP_MODE=full. Two-step confirm required; pass dryRun:true to only preview.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "regperiod",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "domains_transfer",
+      "domain": "domains",
+      "tier": "billing",
+      "whmcsAction": "DomainTransfer",
+      "description": "Initiates an inbound domain transfer at the registrar using the supplied EPP/auth code. Billing-tier: only available when WHMCS_MCP_MODE=full. eppcode is never logged. Two-step confirm required; pass dryRun:true to only preview (the eppcode is still included in the preview payload returned to the caller, since it is required input — it is not logged server-side).",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "eppcode",
+          "type": "enum",
+          "required": false,
+          "description": "EPP/auth transfer code. Never logged; redacted from all output."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "billing_get_credits",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetCredits",
+      "description": "Get a client's current credit balance and credit log.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "billing_get_invoice",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetInvoice",
+      "description": "Get a single invoice by id, including its line items, transactions, and balance.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "billing_get_pay_methods",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetPayMethods",
+      "description": "List a client's stored payment methods. Card/bank account numbers are masked by WHMCS and are additionally redacted server-side as defense in depth; raw PANs never reach the model.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "paymethodid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "type": "enum (\"BankAccount\", \"CreditCard\")",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "billing_get_transactions",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetTransactions",
+      "description": "List gateway transactions, optionally filtered by invoice, client, or transaction id.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "transid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "billing_list_invoices",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetInvoices",
+      "description": "List invoices, optionally filtered by client or status.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Draft\", \"Unpaid\", \"Paid\", \"Cancelled\", \"Refunded\", \"Collections\", \"Overdue\", \"Payment Pending\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "orderby",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "order",
+          "type": "enum (\"ASC\", \"DESC\")",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "quotes_list",
+      "domain": "invoices",
+      "tier": "read",
+      "whmcsAction": "GetQuotes",
+      "description": "List quotes, optionally filtered by client, subject, or stage.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "quoteid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "stage",
+          "type": "enum (\"Draft\", \"Delivered\", \"On Hold\", \"Accepted\", \"Lost\", \"Dead\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "datecreated",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "lastmodified",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "validuntil",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "quotes_send",
+      "domain": "invoices",
+      "tier": "write",
+      "whmcsAction": "SendQuote",
+      "description": "Email an existing quote to its client/prospect.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "quoteid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_add_billable_item",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "AddBillableItem",
+      "description": "Add a one-off or recurring billable line item for a client, to be invoiced per `invoiceaction`.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "description",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "amount",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "invoiceaction",
+          "type": "enum (\"noinvoice\", \"nextcron\", \"nextinvoice\", \"duedate\", \"recur\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "recur",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "recurcycle",
+          "type": "enum (\"Days\", \"Weeks\", \"Months\", \"Years\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "recurfor",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "duedate",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "hours",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_add_credit",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "AddCredit",
+      "description": "Add (or remove) account credit for a client.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "description",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "amount",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "adminid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "type": "enum (\"add\", \"remove\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_add_payment",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "AddInvoicePayment",
+      "description": "Record a payment against an invoice (marks it paid if the amount covers the balance).",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "transid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "gateway",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "amount",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "fees",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_apply_credit",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "ApplyCredit",
+      "description": "Apply client account credit balance to an invoice.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "amount",
+          "type": "any",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_capture_payment",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "CapturePayment",
+      "description": "Attempt to capture payment for an invoice using the client's stored payment method. `cvv`, if provided, is never logged or echoed back (see src/safety/redact.ts).",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "cvv",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_create_invoice",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "CreateInvoice",
+      "description": "Create a new invoice for a client with one or more line items. OPERATOR POLICY: invoices are operator-manual; this tool only exists when WHMCS_MCP_MODE=full and must remain disabled in 3VS deployments (see SECURITY.md).",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Draft\", \"Unpaid\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "draft",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "sendinvoice",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "paymentmethod",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "taxrate",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "duedate",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "items",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "billing_update_invoice",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "UpdateInvoice",
+      "description": "Update an existing invoice's status, dates, notes, or line items. OPERATOR POLICY: invoices are operator-manual; this tool only exists when WHMCS_MCP_MODE=full and must remain disabled in 3VS deployments (see SECURITY.md).",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "invoiceid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Draft\", \"Unpaid\", \"Paid\", \"Cancelled\", \"Refunded\", \"Collections\", \"Overdue\", \"Payment Pending\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "paymentmethod",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "duedate",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "datepaid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "items",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "newitems",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "deletelineids",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "publish",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "publishandsendemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "quotes_create",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "CreateQuote",
+      "description": "Create a new quote for an existing client or a prospect, with one or more line items.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "prospect",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "stage",
+          "type": "enum (\"Draft\", \"Delivered\", \"On Hold\", \"Accepted\", \"Lost\", \"Dead\")",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "validuntil",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "lineitems",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "proposal",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "customernotes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "adminnotes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "quotes_update",
+      "domain": "invoices",
+      "tier": "billing",
+      "whmcsAction": "UpdateQuote",
+      "description": "Update an existing quote's subject, stage, line items, or notes.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "quoteid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "prospect",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "stage",
+          "type": "enum (\"Draft\", \"Delivered\", \"On Hold\", \"Accepted\", \"Lost\", \"Dead\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "validuntil",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "lineitems",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "proposal",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "customernotes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "adminnotes",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": false,
+          "description": "When true, validate and serialize the request but do not call the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Echo the confirmToken returned by a prior preview call of this same tool to execute the action."
+        }
+      ]
+    },
+    {
+      "name": "orders_get_statuses",
+      "domain": "orders",
+      "tier": "read",
+      "whmcsAction": "GetOrderStatuses",
+      "description": "List the order statuses configured in this WHMCS install.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": []
+    },
+    {
+      "name": "orders_list",
+      "domain": "orders",
+      "tier": "read",
+      "whmcsAction": "GetOrders",
+      "description": "List WHMCS orders. Supports lookup by order id, client id, requestor, or status, with pagination.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        },
+        {
+          "name": "id",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "requestor_id",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Pending\", \"Active\", \"Fraud\", \"Cancelled\")",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "orders_accept",
+      "domain": "orders",
+      "tier": "write",
+      "whmcsAction": "AcceptOrder",
+      "description": "Accept a pending WHMCS order, optionally provisioning the service/module and registering the domain. Write-tier: gated behind WHMCS_MCP_MODE=write|full and a two-step confirm.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "orderid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "serverid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "serviceusername",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "servicepassword",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "registrar",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "sendregistrar",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "autosetup",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "sendemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "orders_pending",
+      "domain": "orders",
+      "tier": "write",
+      "whmcsAction": "PendingOrder",
+      "description": "Move a WHMCS order back to Pending status.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "orderid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "orders_create",
+      "domain": "orders",
+      "tier": "billing",
+      "whmcsAction": "AddOrder",
+      "description": "Create a new WHMCS order for a client (products and/or domains). Billing-tier: gated behind WHMCS_MCP_MODE=full and a two-step confirm (call once for a preview, then again with the returned confirmToken to execute). Supports dryRun to validate/serialize without calling WHMCS.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "paymentmethod",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "items",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "domains",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "promocode",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noinvoice",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noinvoiceemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": "Suppress the client-facing notification email for this action."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "orders_cancel",
+      "domain": "orders",
+      "tier": "destructive",
+      "whmcsAction": "CancelOrder",
+      "description": "Cancel a WHMCS order, optionally cancelling its associated subscription/service. Destructive-tier: requires a two-step confirm regardless of mode.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "orderid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "cancelsub",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": "Suppress the client-facing notification email for this action."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "orders_delete",
+      "domain": "orders",
+      "tier": "destructive",
+      "whmcsAction": "DeleteOrder",
+      "description": "Permanently delete a WHMCS order. WHMCS only allows this for orders already in Cancelled or Fraud status. Destructive-tier: requires a two-step confirm regardless of mode.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "orderid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "orders_mark_fraud",
+      "domain": "orders",
+      "tier": "destructive",
+      "whmcsAction": "FraudOrder",
+      "description": "Mark a WHMCS order as fraudulent, optionally cancelling its associated subscription. Destructive-tier: requires a two-step confirm regardless of mode.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "orderid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "cancelsub",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "clients_get_addons",
+      "domain": "products",
+      "tier": "read",
+      "whmcsAction": "GetClientsAddons",
+      "description": "List addons attached to a client's service(s) (WHMCS GetClientsAddons).",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": "Filter to a single client's addons."
+        },
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": false,
+          "description": "Filter to addons attached to one service."
+        },
+        {
+          "name": "addonid",
+          "type": "enum",
+          "required": false,
+          "description": "Return a single client addon by its ID."
+        }
+      ]
+    },
+    {
+      "name": "clients_get_services",
+      "domain": "products",
+      "tier": "read",
+      "whmcsAction": "GetClientsProducts",
+      "description": "List a client's provisioned services/products (WHMCS GetClientsProducts). Service passwords and other secrets are redacted from the response.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": "Filter to a single client's services."
+        },
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": false,
+          "description": "Return a single service by its ID."
+        },
+        {
+          "name": "pid",
+          "type": "enum",
+          "required": false,
+          "description": "Filter by product/package ID."
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": "Filter by the service's associated domain."
+        },
+        {
+          "name": "username2",
+          "type": "enum",
+          "required": false,
+          "description": "Filter by the service's module username (WHMCS parameter name)."
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        }
+      ]
+    },
+    {
+      "name": "products_get_promotions",
+      "domain": "products",
+      "tier": "read",
+      "whmcsAction": "GetPromotions",
+      "description": "List active promotions/discount codes (WHMCS GetPromotions).",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "code",
+          "type": "enum",
+          "required": false,
+          "description": "Return a single promotion/coupon by its code."
+        }
+      ]
+    },
+    {
+      "name": "products_list",
+      "domain": "products",
+      "tier": "read",
+      "whmcsAction": "GetProducts",
+      "description": "List products/services in the product catalog (WHMCS GetProducts).",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "pid",
+          "type": "any",
+          "required": false,
+          "description": "A single product ID, an array of IDs, or a WHMCS-style CSV string."
+        },
+        {
+          "name": "gid",
+          "type": "enum",
+          "required": false,
+          "description": "Filter by product group ID."
+        },
+        {
+          "name": "module",
+          "type": "enum",
+          "required": false,
+          "description": "Filter by the provisioning module name (e.g. 'cpanel', 'noserver')."
+        }
+      ]
+    },
+    {
+      "name": "services_module_change_package",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "ModuleChangePackage",
+      "description": "Run the provisioning module's change-package action for a service (WHMCS ModuleChangePackage). Requires confirmToken from a prior preview call.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to re-provision on its module after a product/config change."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_module_create",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "ModuleCreate",
+      "description": "Run the provisioning module's create action for a service (WHMCS ModuleCreate). Requires confirmToken from a prior preview call.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to provision via its module command."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_module_suspend",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "ModuleSuspend",
+      "description": "Run the provisioning module's suspend action for a service (WHMCS ModuleSuspend). Requires confirmToken from a prior preview call.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to suspend via its module."
+        },
+        {
+          "name": "suspendreason",
+          "type": "enum",
+          "required": false,
+          "description": "Reason recorded against the suspension, shown to staff/client per template."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_module_unsuspend",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "ModuleUnsuspend",
+      "description": "Run the provisioning module's unsuspend action for a service (WHMCS ModuleUnsuspend). Requires confirmToken from a prior preview call.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to unsuspend via its module."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_update",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "UpdateClientProduct",
+      "description": "Update a client service's fields (status, billing, domain, notes, config options) via WHMCS UpdateClientProduct. Supports dryRun to validate without calling WHMCS.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service (hosting/product) to update."
+        },
+        {
+          "name": "pid",
+          "type": "enum",
+          "required": false,
+          "description": "Change the service to a different product ID."
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Active\", \"Suspended\", \"Terminated\", \"Cancelled\", \"Fraud\", \"Pending\")",
+          "required": false,
+          "description": "New service status."
+        },
+        {
+          "name": "nextduedate",
+          "type": "enum",
+          "required": false,
+          "description": "Next due date (YYYY-MM-DD)."
+        },
+        {
+          "name": "billingcycle",
+          "type": "enum (\"Free Account\", \"One Time\", \"Monthly\", \"Quarterly\", \"Semi-Annually\", \"Annually\", \"Biennially\", \"Triennially\")",
+          "required": false,
+          "description": "New billing cycle."
+        },
+        {
+          "name": "recurringamount",
+          "type": "any",
+          "required": false,
+          "description": "Override recurring amount."
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "required": false,
+          "description": "Associated domain for the service."
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": "Admin notes on the service."
+        },
+        {
+          "name": "customfields",
+          "type": "enum",
+          "required": false,
+          "description": "Custom field id/name -> value map."
+        },
+        {
+          "name": "configoptions",
+          "type": "enum",
+          "required": false,
+          "description": "Configurable option selections to apply to the service."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_update_addon",
+      "domain": "products",
+      "tier": "write",
+      "whmcsAction": "UpdateClientAddon",
+      "description": "Update a client addon's fields via WHMCS UpdateClientAddon.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "enum",
+          "required": true,
+          "description": "The client addon record ID (not the addon/product ID)."
+        },
+        {
+          "name": "status",
+          "type": "enum (\"Pending\", \"Active\", \"Terminated\", \"Cancelled\", \"Fraud\")",
+          "required": false,
+          "description": "New addon status."
+        },
+        {
+          "name": "addonid",
+          "type": "enum",
+          "required": false,
+          "description": "Reassign to a different addon/product ID."
+        },
+        {
+          "name": "name",
+          "type": "enum",
+          "required": false,
+          "description": "Override the addon's display name."
+        },
+        {
+          "name": "setupfee",
+          "type": "any",
+          "required": false,
+          "description": "Override the one-time setup fee."
+        },
+        {
+          "name": "recurring",
+          "type": "any",
+          "required": false,
+          "description": "Override the recurring amount."
+        },
+        {
+          "name": "billingcycle",
+          "type": "enum (\"Free Account\", \"One Time\", \"Monthly\", \"Quarterly\", \"Semi-Annually\", \"Annually\", \"Biennially\", \"Triennially\")",
+          "required": false,
+          "description": "New billing cycle for the addon."
+        },
+        {
+          "name": "nextduedate",
+          "type": "enum",
+          "required": false,
+          "description": "Next due date (YYYY-MM-DD)."
+        },
+        {
+          "name": "notes",
+          "type": "enum",
+          "required": false,
+          "description": "Admin notes on the addon."
+        }
+      ]
+    },
+    {
+      "name": "services_upgrade",
+      "domain": "products",
+      "tier": "billing",
+      "whmcsAction": "UpgradeProduct",
+      "description": "Price and optionally execute a product or config-option upgrade (WHMCS UpgradeProduct). Only advertised when WHMCS_MCP_MODE=full. First call without confirmToken returns a priced preview and a confirmToken; the mutating call must echo that token within its TTL.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to upgrade/downgrade."
+        },
+        {
+          "name": "type",
+          "type": "enum (\"product\", \"configoptions\")",
+          "required": true,
+          "description": "Whether this changes the product/package itself or only config options."
+        },
+        {
+          "name": "newproductid",
+          "type": "enum",
+          "required": false,
+          "description": "Target product ID when type=product."
+        },
+        {
+          "name": "newproductbillingcycle",
+          "type": "enum (\"Free Account\", \"One Time\", \"Monthly\", \"Quarterly\", \"Semi-Annually\", \"Annually\", \"Biennially\", \"Triennially\")",
+          "required": false,
+          "description": "Target billing cycle when type=product."
+        },
+        {
+          "name": "configoptions",
+          "type": "enum",
+          "required": false,
+          "description": "Configurable option selections to apply to the service."
+        },
+        {
+          "name": "paymentmethod",
+          "type": "enum",
+          "required": true,
+          "description": "Payment gateway module name to invoice the upgrade order against."
+        },
+        {
+          "name": "promocode",
+          "type": "enum",
+          "required": false,
+          "description": "Promo/coupon code to apply."
+        },
+        {
+          "name": "calconly",
+          "type": "enum",
+          "required": false,
+          "description": "Price-only preview; WHMCS performs no upgrade when true."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "services_module_terminate",
+      "domain": "products",
+      "tier": "destructive",
+      "whmcsAction": "ModuleTerminate",
+      "description": "Run the provisioning module's terminate action for a service (WHMCS ModuleTerminate). Destructive and irreversible at the module/provider layer. Requires confirmToken from a prior preview call.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": true,
+          "description": "The client service to terminate via its module."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        }
+      ]
+    },
+    {
+      "name": "system_get_activity_log",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetActivityLog",
+      "description": "Get admin/system activity log entries, optionally filtered by client, admin user, date, description substring, or IP address.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Max rows to return (WHMCS caps this at 250)."
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "date",
+          "type": "enum",
+          "required": false,
+          "description": "Date in YYYY-MM-DD format."
+        },
+        {
+          "name": "user",
+          "type": "enum",
+          "required": false,
+          "description": "Admin username that logged the activity."
+        },
+        {
+          "name": "description",
+          "type": "enum",
+          "required": false,
+          "description": "Substring filter against the activity log description."
+        },
+        {
+          "name": "ipaddress",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "system_get_admin_details",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetAdminDetails",
+      "description": "Get the identity, role, and permissions of the admin the configured API credentials resolve to. Secret-shaped fields are redacted before the result reaches the model.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": []
+    },
+    {
+      "name": "system_get_currencies",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetCurrencies",
+      "description": "Get configured currencies and their exchange rates.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": []
+    },
+    {
+      "name": "system_get_details",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "WhmcsDetails",
+      "description": "Get the connected WHMCS instance's version, license, and URL details. Use this to confirm runtime version compatibility (8.x/9.x).",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": []
+    },
+    {
+      "name": "system_get_email_templates",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetEmailTemplates",
+      "description": "Get configured email templates, optionally filtered by type (general/product/domain/invoice/support/affiliate) and language.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "type",
+          "type": "enum (\"general\", \"product\", \"domain\", \"invoice\", \"support\", \"affiliate\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "required": false,
+          "description": "Locale code, e.g. 'english'; WHMCS falls back to the default language."
+        }
+      ]
+    },
+    {
+      "name": "system_get_payment_methods",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetPaymentMethods",
+      "description": "Get the payment gateways/methods currently active on this WHMCS instance.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": []
+    },
+    {
+      "name": "system_get_stats",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetStats",
+      "description": "Get dashboard-style summary statistics (client/order/invoice/ticket counts, income timeline).",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "timeline_days",
+          "type": "enum",
+          "required": false,
+          "description": "Number of days back to include in the returned timeline stats."
+        }
+      ]
+    },
+    {
+      "name": "system_get_todo_items",
+      "domain": "system",
+      "tier": "read",
+      "whmcsAction": "GetToDoItems",
+      "description": "Get admin To-Do List items, optionally filtered by status.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "status",
+          "type": "enum (\"Incomplete\", \"Completed\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Max rows to return (WHMCS caps this at 250)."
+        }
+      ]
+    },
+    {
+      "name": "system_log_activity",
+      "domain": "system",
+      "tier": "write",
+      "whmcsAction": "LogActivity",
+      "description": "Write a custom entry into the WHMCS activity log, optionally attributed to a client.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "description",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "When true, validate and preview only -- no request is sent to WHMCS."
+        }
+      ]
+    },
+    {
+      "name": "system_send_email",
+      "domain": "system",
+      "tier": "write",
+      "whmcsAction": "SendEmail",
+      "description": "Send a WHMCS email: either a pre-defined template (mode='template', messagename) or an ad hoc message (mode='custom', customtype/customsubject/custommessage) to the party associated with `id`.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": []
+    },
+    {
+      "name": "whmcs_raw_call",
+      "domain": "system",
+      "tier": "destructive",
+      "whmcsAction": "<any documented action>",
+      "description": "Escape hatch: call any documented WHMCS 8.x/9.x External API action not covered by a typed tool. The `action` name is validated against a bundled allowlist of documented actions (see src/schemas/system.ts); unknown actions are rejected even in full mode. Classified as the highest (destructive) tier since it can reach billing/destructive WHMCS actions directly, so it always requires confirmToken and is only advertised under WHMCS_MCP_MODE=full.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "action",
+          "type": "enum (\"WhmcsDetails\", \"GetStats\", \"GetActivityLog\", \"GetAdminDetails\", \"GetToDoItems\", \"GetEmailTemplates\", \"SendEmail\", \"GetPaymentMethods\", \"GetCurrencies\", \"LogActivity\", \"GetTickets\", \"GetTicket\", \"OpenTicket\", \"AddTicketReply\", \"AddTicketNote\", \"GetTicketNotes\", \"UpdateTicket\", \"UpdateTicketReply\", \"MergeTicket\", \"DeleteTicket\", \"GetTicketAttachment\", \"GetTicketCounts\", \"GetSupportDepartments\", \"GetSupportStatuses\", \"GetTicketPredefinedReplies\", \"GetClients\", \"GetClientsDetails\", \"AddClient\", \"UpdateClient\", \"CloseClient\", \"GetContacts\", \"AddContact\", \"UpdateContact\", \"GetEmails\", \"GetClientGroups\", \"GetClientsProducts\", \"GetClientsAddons\", \"GetProducts\", \"GetPromotions\", \"UpdateClientProduct\", \"UpdateClientAddon\", \"UpgradeProduct\", \"ModuleCreate\", \"ModuleSuspend\", \"ModuleUnsuspend\", \"ModuleTerminate\", \"ModuleChangePackage\", \"GetInvoices\", \"GetInvoice\", \"CreateInvoice\", \"UpdateInvoice\", \"AddInvoicePayment\", \"ApplyCredit\", \"CapturePayment\", \"AddCredit\", \"GetCredits\", \"GetTransactions\", \"AddBillableItem\", \"GetPayMethods\", \"GetQuotes\", \"CreateQuote\", \"UpdateQuote\", \"SendQuote\", \"GetClientsDomains\", \"DomainWhois\", \"DomainGetNameservers\", \"DomainUpdateNameservers\", \"DomainGetLockingStatus\", \"DomainUpdateLockingStatus\", \"DomainGetWhoisInfo\", \"UpdateClientDomain\", \"DomainRenew\", \"DomainRegister\", \"DomainTransfer\", \"GetTLDPricing\", \"GetOrders\", \"GetOrderStatuses\", \"AddOrder\", \"AcceptOrder\", \"PendingOrder\", \"CancelOrder\", \"FraudOrder\", \"DeleteOrder\")",
+          "required": true,
+          "description": "Documented WHMCS External API action name; validated against the bundled allowlist."
+        },
+        {
+          "name": "params",
+          "type": "enum",
+          "required": true,
+          "description": "Raw action parameters exactly as WHMCS documents them for `action` (form-encoded on the wire)."
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "When true, validate and preview only -- no request is sent to WHMCS."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "Short-lived token returned by a prior preview call; echo it back to execute."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTicket",
+      "description": "Get a single ticket, including its replies, by ticketid or ticketnum.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "ticketnum",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "repliessort",
+          "type": "enum (\"ASC\", \"DESC\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_attachment",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTicketAttachment",
+      "description": "Fetch a ticket, reply, or note attachment.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "relatedid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "type": "enum (\"ticket\", \"reply\", \"note\")",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "index",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_counts",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTicketCounts",
+      "description": "Get open/answered/etc. ticket counts.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "ignoreDepartmentAssignments",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "includeCountsByStatus",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_departments",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetSupportDepartments",
+      "description": "List support departments.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "ignore_dept_assignments",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_notes",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTicketNotes",
+      "description": "Get internal admin notes for a ticket.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_predefined_replies",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTicketPredefinedReplies",
+      "description": "List predefined ticket replies.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "catid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_get_statuses",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetSupportStatuses",
+      "description": "List support ticket statuses.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "deptid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_list",
+      "domain": "tickets",
+      "tier": "read",
+      "whmcsAction": "GetTickets",
+      "description": "List support tickets, filterable by department, client, email, status, or subject.",
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "limitstart",
+          "type": "enum",
+          "required": false,
+          "description": "Zero-based offset into the result set (WHMCS `limitstart`)."
+        },
+        {
+          "name": "limitnum",
+          "type": "enum",
+          "required": false,
+          "description": "Maximum rows to return, capped at 250 (WHMCS `limitnum`)."
+        },
+        {
+          "name": "deptid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "any",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ignore_dept_assignments",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_add_note",
+      "domain": "tickets",
+      "tier": "write",
+      "whmcsAction": "AddTicketNote",
+      "description": "Add an internal note to a ticket.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "ticketnum",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "markdown",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_create",
+      "domain": "tickets",
+      "tier": "write",
+      "whmcsAction": "OpenTicket",
+      "description": "Open a new support ticket.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "deptid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "contactid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "priority",
+          "type": "enum (\"Low\", \"Medium\", \"High\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "serviceid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "domainid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "admin",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "markdown",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "customfields",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_reply",
+      "domain": "tickets",
+      "tier": "write",
+      "whmcsAction": "AddTicketReply",
+      "description": "Reply to a support ticket.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "adminusername",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "clientid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "contactid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "any",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "markdown",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "noemail",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "created",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_update",
+      "domain": "tickets",
+      "tier": "write",
+      "whmcsAction": "UpdateTicket",
+      "description": "Update ticket metadata (status/department/priority/flag).",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "any",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "deptid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "subject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "priority",
+          "type": "enum (\"Low\", \"Medium\", \"High\")",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "flag",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "userid",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "cc",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "removeFlag",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_update_reply",
+      "domain": "tickets",
+      "tier": "write",
+      "whmcsAction": "UpdateTicketReply",
+      "description": "Edit an existing ticket reply.",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": true,
+      "params": [
+        {
+          "name": "replyid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "markdown",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_delete",
+      "domain": "tickets",
+      "tier": "destructive",
+      "whmcsAction": "DeleteTicket",
+      "description": "Permanently delete a ticket.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    },
+    {
+      "name": "tickets_merge",
+      "domain": "tickets",
+      "tier": "destructive",
+      "whmcsAction": "MergeTicket",
+      "description": "Merge one or more tickets into a target ticket.",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "params": [
+        {
+          "name": "ticketid",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "mergeticketids",
+          "type": "enum",
+          "required": true,
+          "description": ""
+        },
+        {
+          "name": "newsubject",
+          "type": "enum",
+          "required": false,
+          "description": ""
+        },
+        {
+          "name": "dryRun",
+          "type": "enum",
+          "required": true,
+          "description": "MCP-local only. When true, validates and serializes the WHMCS request and returns a preview without calling the WHMCS API."
+        },
+        {
+          "name": "confirmToken",
+          "type": "enum",
+          "required": false,
+          "description": "MCP-local only. Required on the second call to a billing- or destructive-tier tool: the short-lived, single-use token returned by that tool's first (preview) call. See src/safety/confirm.ts."
+        }
+      ]
+    }
+  ]
+}

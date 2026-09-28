@@ -51,8 +51,8 @@ export class WhmcsApiError extends Error {
   constructor(params: {
     action: string;
     message: string;
-    whmcsMessage?: string;
-    httpStatus?: number;
+    whmcsMessage?: string | undefined;
+    httpStatus?: number | undefined;
     raw?: unknown;
   }) {
     super(params.message);
@@ -68,7 +68,7 @@ export class WhmcsApiError extends Error {
 export class WhmcsTimeoutError extends Error {
   readonly action: string;
   constructor(action: string, timeoutMs: number) {
-    super(`WHMCS API call "${action}" timed out after ${timeoutMs}ms`);
+    super(`WHMCS API call "${action}" timed out after ${String(timeoutMs)}ms`);
     this.name = "WhmcsTimeoutError";
     this.action = action;
   }
@@ -228,15 +228,24 @@ export function unwrapCollection<T>(container: unknown, itemKey: string): T[] {
 // WhmcsClient
 // ---------------------------------------------------------------------------
 
-export interface WhmcsCallParams {
-  [key: string]: string | number | boolean | undefined | null;
-}
+/**
+ * Accepts any JSON-serializable value: primitives pass through as-is,
+ * while arrays/objects (e.g. `configoptions`, `customfields`) are
+ * JSON-encoded in `performOne` below since WHMCS's form-encoded API has
+ * no native structured-value representation.
+ */
+export type WhmcsCallParams = Record<string, unknown>;
 
-/** Successful-envelope shape common to every WHMCS External API action. */
+/**
+ * Successful-envelope shape common to every WHMCS External API action.
+ * Deliberately has no index signature: concrete per-action response types
+ * in src/types/whmcs.ts (e.g. `WhmcsGetInvoicesRaw`) extend `WhmcsResultBase`
+ * with a closed, specific shape, and an index signature here would make
+ * `T extends WhmcsRawResponse` reject every one of them under `strict`.
+ */
 export interface WhmcsRawResponse {
   result?: string;
   message?: string;
-  [key: string]: unknown;
 }
 
 export class WhmcsClient {
@@ -281,7 +290,7 @@ export class WhmcsClient {
    *   include PII). Callers that need to log should log `error.action` and
    *   `error.whmcsMessage` from a caught `WhmcsApiError`, not `error.raw`.
    */
-  async call<T extends WhmcsRawResponse = WhmcsRawResponse>(
+  async call<T extends object = WhmcsRawResponse>(
     action: string,
     params: WhmcsCallParams = {},
   ): Promise<T> {
@@ -313,7 +322,7 @@ export class WhmcsClient {
       : new WhmcsApiError({ action, message: "WHMCS API call failed for an unknown reason" });
   }
 
-  private async performOne<T extends WhmcsRawResponse>(
+  private async performOne<T extends object>(
     action: string,
     params: WhmcsCallParams,
   ): Promise<T> {
@@ -325,13 +334,23 @@ export class WhmcsClient {
     body.set("responsetype", "json");
     for (const [key, value] of Object.entries(params)) {
       if (value === undefined || value === null) continue;
-      body.set(key, String(value));
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        body.set(key, String(value));
+      } else {
+        // Structured values (arrays/objects) have no native form-encoded
+        // representation in the WHMCS External API; JSON-encode them so the
+        // receiving addon/module can decode a well-defined wire format
+        // rather than silently receiving "[object Object]".
+        body.set(key, JSON.stringify(value));
+      }
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, this.timeoutMs);
 
-    let httpResponse: Response;
+    let httpResponse: Awaited<ReturnType<typeof fetch>>;
     try {
       httpResponse = await this.fetchImpl(this.endpoint, {
         method: "POST",
@@ -367,7 +386,7 @@ export class WhmcsClient {
       }
       throw new WhmcsApiError({
         action,
-        message: `WHMCS API HTTP ${httpResponse.status} for action "${action}"`,
+        message: `WHMCS API HTTP ${String(httpResponse.status)} for action "${action}"`,
         httpStatus: httpResponse.status,
         raw,
       });
@@ -376,18 +395,19 @@ export class WhmcsClient {
     let parsed: T;
     try {
       parsed = (await httpResponse.json()) as T;
-    } catch (err) {
+    } catch (_err) {
       throw new WhmcsApiError({
         action,
         message: `WHMCS API returned non-JSON for action "${action}" (unexpected — check responsetype and WHMCS_API_URL)`,
       });
     }
 
-    if (parsed.result === "error") {
+    const envelope = parsed as unknown as WhmcsRawResponse;
+    if (envelope.result === "error") {
       throw new WhmcsApiError({
         action,
-        message: `WHMCS API error on action "${action}": ${parsed.message ?? "(no message)"}`,
-        whmcsMessage: parsed.message,
+        message: `WHMCS API error on action "${action}": ${envelope.message ?? "(no message)"}`,
+        ...(envelope.message !== undefined ? { whmcsMessage: envelope.message } : {}),
         httpStatus: httpResponse.status,
         raw: parsed,
       });
@@ -395,4 +415,14 @@ export class WhmcsClient {
 
     return parsed;
   }
+}
+
+/**
+ * Convenience factory, equivalent to `new WhmcsClient(opts)`. Exists so
+ * callers (and tests) can construct a client without importing the class
+ * directly, matching the functional-constructor style used elsewhere in
+ * this codebase's test suite.
+ */
+export function createWhmcsClient(opts: WhmcsClientOptions): WhmcsClient {
+  return new WhmcsClient(opts);
 }

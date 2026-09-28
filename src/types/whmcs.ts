@@ -44,9 +44,7 @@ export interface WhmcsResultBase {
 }
 
 /** A raw WHMCS "maybe array, maybe single object" collection wrapper. */
-export type WhmcsCollection<TKey extends string, TItem> = {
-  [K in TKey]?: TItem[] | TItem;
-};
+export type WhmcsCollection<TKey extends string, TItem> = Partial<Record<TKey, TItem[] | TItem>>;
 
 // ---------------------------------------------------------------------------
 // System / WhmcsDetails (system_get_details, system_get_*)
@@ -109,7 +107,7 @@ export interface WhmcsToDoItemRaw {
   date: WhmcsDate;
   duedate?: WhmcsDate;
   description: string;
-  status: "Incomplete" | "Complete" | string;
+  status: "Incomplete" | "Complete" | (string & {});
   admin?: string;
 }
 export type WhmcsToDoItemsRaw = WhmcsResultBase &
@@ -190,7 +188,7 @@ export interface TicketRaw {
   subject: string;
   message?: string;
   status: string;
-  priority?: "Low" | "Medium" | "High" | string;
+  priority?: "Low" | "Medium" | "High" | (string & {});
   admin?: string;
   name?: string;
   email?: string;
@@ -228,7 +226,7 @@ export interface WhmcsOpenTicketResult extends WhmcsResultBase {
   tid?: string;
 }
 
-export interface WhmcsAddTicketReplyResult extends WhmcsResultBase {}
+export type WhmcsAddTicketReplyResult = WhmcsResultBase;
 
 export interface WhmcsTicketCountsResult extends WhmcsResultBase {
   awaitingreply?: string;
@@ -292,7 +290,7 @@ export interface ClientRaw {
   postcode?: string;
   country?: string;
   phonenumber?: string;
-  status?: "Active" | "Inactive" | "Closed" | string;
+  status?: "Active" | "Inactive" | "Closed" | (string & {});
   groupid?: WhmcsId;
   currency?: WhmcsId;
   defaultgateway?: string;
@@ -449,7 +447,7 @@ export interface ProductRaw {
   productname?: string;
   description?: string;
   module?: string;
-  paytype?: "free" | "onetime" | "recurring" | string;
+  paytype?: "free" | "onetime" | "recurring" | (string & {});
   pricing?: Record<
     string,
     { prefix?: string; suffix?: string; msetupfee?: string; qsetupfee?: string; [cycle: string]: unknown }
@@ -473,8 +471,8 @@ export interface WhmcsPromotionRaw {
 export type WhmcsGetPromotionsRaw = WhmcsResultBase &
   WhmcsCollection<"promotion", WhmcsPromotionRaw>;
 
-export interface WhmcsUpdateClientProductResult extends WhmcsResultBase {}
-export interface WhmcsUpdateClientAddonResult extends WhmcsResultBase {}
+export type WhmcsUpdateClientProductResult = WhmcsResultBase;
+export type WhmcsUpdateClientAddonResult = WhmcsResultBase;
 
 /** Response of `UpgradeProduct`; `calconly=true` returns a price preview only. */
 export interface WhmcsUpgradeProductResult extends WhmcsResultBase {
@@ -486,7 +484,7 @@ export interface WhmcsUpgradeProductResult extends WhmcsResultBase {
   recurringamount?: WhmcsMoney;
 }
 
-export interface WhmcsModuleActionResult extends WhmcsResultBase {}
+export type WhmcsModuleActionResult = WhmcsResultBase;
 
 // ---------------------------------------------------------------------------
 // Invoices / Transactions / Credits / Quotes
@@ -530,7 +528,7 @@ export interface InvoiceRaw {
   invoicenum?: string;
   date: WhmcsDate;
   duedate?: WhmcsDate;
-  datepaid?: WhmcsDateTime | "0000-00-00 00:00:00";
+  datepaid?: WhmcsDateTime;
   subtotal?: WhmcsMoney;
   credit?: WhmcsMoney;
   tax?: WhmcsMoney;
@@ -539,7 +537,7 @@ export interface InvoiceRaw {
   balance?: WhmcsMoney;
   taxrate?: string;
   taxrate2?: string;
-  status: "Draft" | "Unpaid" | "Paid" | "Cancelled" | "Refunded" | "Collections" | "Payment Pending" | string;
+  status: "Draft" | "Unpaid" | "Paid" | "Cancelled" | "Refunded" | "Collections" | "Payment Pending" | (string & {});
   paymentmethod?: string;
   notes?: string;
   items?: WhmcsCollection<"item", InvoiceItemRaw>;
@@ -549,8 +547,8 @@ export interface InvoiceRaw {
 /** Normalized invoice shape returned by billing_get_invoice. */
 export interface Invoice
   extends Omit<InvoiceRaw, "items" | "transactions"> {
-  items?: InvoiceItem[];
-  transactions?: Transaction[];
+  items?: InvoiceItem[] | undefined;
+  transactions?: Transaction[] | undefined;
 }
 
 export type WhmcsGetInvoicesRaw = WhmcsResultBase &
@@ -564,14 +562,14 @@ export type WhmcsGetInvoiceRaw = WhmcsResultBase & InvoiceRaw;
 export interface WhmcsCreateInvoiceResult extends WhmcsResultBase {
   invoiceid: WhmcsId;
 }
-export interface WhmcsUpdateInvoiceResult extends WhmcsResultBase {}
-export interface WhmcsAddInvoicePaymentResult extends WhmcsResultBase {}
-export interface WhmcsApplyCreditResult extends WhmcsResultBase {}
+export type WhmcsUpdateInvoiceResult = WhmcsResultBase;
+export type WhmcsAddInvoicePaymentResult = WhmcsResultBase;
+export type WhmcsApplyCreditResult = WhmcsResultBase;
 export interface WhmcsCapturePaymentResult extends WhmcsResultBase {
   transactionId?: string;
   amount?: WhmcsMoney;
 }
-export interface WhmcsAddCreditResult extends WhmcsResultBase {}
+export type WhmcsAddCreditResult = WhmcsResultBase;
 export interface WhmcsAddBillableItemResult extends WhmcsResultBase {
   itemid?: WhmcsId;
   invoiceid?: WhmcsId;
@@ -582,7 +580,7 @@ export interface CreditLogRaw {
   date: WhmcsDateTime;
   description: string;
   amount: WhmcsMoney;
-  type?: "Add" | "Remove" | string;
+  type?: "Add" | "Remove" | (string & {});
   admin?: string;
 }
 export type WhmcsGetCreditsRaw = WhmcsResultBase & {
@@ -592,7 +590,7 @@ export type WhmcsGetCreditsRaw = WhmcsResultBase & {
 /** Payment method on file for a client; card/bank numbers are masked, never raw. */
 export interface PayMethodRaw {
   id: WhmcsId;
-  type: "BankAccount" | "CreditCard" | string;
+  type: "BankAccount" | "CreditCard" | (string & {});
   description?: string;
   /** Masked, e.g. "**** **** **** 4242"; never the full PAN. */
   cardLastFour?: string;
@@ -617,7 +615,7 @@ export interface QuoteRaw {
   id: WhmcsId;
   quoteid?: WhmcsId;
   subject: string;
-  stage: "Draft" | "Delivered" | "On Hold" | "Accepted" | "Lost" | "Dead" | string;
+  stage: "Draft" | "Delivered" | "On Hold" | "Accepted" | "Lost" | "Dead" | (string & {});
   userid?: WhmcsId;
   datecreated?: WhmcsDate;
   lastmodified?: WhmcsDate;
@@ -630,7 +628,7 @@ export interface QuoteRaw {
   lineitems?: WhmcsCollection<"lineitem", QuoteLineItemRaw>;
 }
 export interface Quote extends Omit<QuoteRaw, "lineitems"> {
-  lineitems?: QuoteLineItem[];
+  lineitems?: QuoteLineItem[] | undefined;
 }
 export type WhmcsGetQuotesRaw = WhmcsResultBase &
   WhmcsCollection<"quotes", QuoteRaw> & { totalresults?: string };
@@ -638,8 +636,8 @@ export type WhmcsGetQuotesRaw = WhmcsResultBase &
 export interface WhmcsCreateQuoteResult extends WhmcsResultBase {
   quoteid: WhmcsId;
 }
-export interface WhmcsUpdateQuoteResult extends WhmcsResultBase {}
-export interface WhmcsSendQuoteResult extends WhmcsResultBase {}
+export type WhmcsUpdateQuoteResult = WhmcsResultBase;
+export type WhmcsSendQuoteResult = WhmcsResultBase;
 
 // ---------------------------------------------------------------------------
 // Domains
@@ -683,12 +681,12 @@ export interface WhmcsDomainGetNameserversResult extends WhmcsResultBase {
   ns4?: string;
   ns5?: string;
 }
-export interface WhmcsDomainUpdateNameserversResult extends WhmcsResultBase {}
+export type WhmcsDomainUpdateNameserversResult = WhmcsResultBase;
 
 export interface WhmcsDomainGetLockingStatusResult extends WhmcsResultBase {
   locked: boolean | "1" | "0";
 }
-export interface WhmcsDomainUpdateLockingStatusResult extends WhmcsResultBase {}
+export type WhmcsDomainUpdateLockingStatusResult = WhmcsResultBase;
 
 /** Registrant WHOIS contact info; PII redaction applies before return. */
 export interface WhmcsDomainWhoisInfoResult extends WhmcsResultBase {
@@ -698,7 +696,7 @@ export interface WhmcsDomainWhoisInfoResult extends WhmcsResultBase {
   Billing?: Record<string, string>;
 }
 
-export interface WhmcsUpdateClientDomainResult extends WhmcsResultBase {}
+export type WhmcsUpdateClientDomainResult = WhmcsResultBase;
 export interface WhmcsDomainRenewResult extends WhmcsResultBase {
   invoiceid?: WhmcsId;
 }
@@ -730,7 +728,7 @@ export interface OrderRaw {
   userid: WhmcsId;
   contactid?: WhmcsId;
   date: WhmcsDateTime;
-  status: "Pending" | "Active" | "Fraud" | "Cancelled" | string;
+  status: "Pending" | "Active" | "Fraud" | "Cancelled" | (string & {});
   paymentmethod?: string;
   amount?: WhmcsMoney;
   invoiceid?: WhmcsId;
@@ -754,21 +752,21 @@ export interface WhmcsAddOrderResult extends WhmcsResultBase {
   domainids?: WhmcsId[];
   addonids?: WhmcsId[];
 }
-export interface WhmcsAcceptOrderResult extends WhmcsResultBase {}
-export interface WhmcsPendingOrderResult extends WhmcsResultBase {}
-export interface WhmcsCancelOrderResult extends WhmcsResultBase {}
-export interface WhmcsFraudOrderResult extends WhmcsResultBase {}
-export interface WhmcsDeleteOrderResult extends WhmcsResultBase {}
+export type WhmcsAcceptOrderResult = WhmcsResultBase;
+export type WhmcsPendingOrderResult = WhmcsResultBase;
+export type WhmcsCancelOrderResult = WhmcsResultBase;
+export type WhmcsFraudOrderResult = WhmcsResultBase;
+export type WhmcsDeleteOrderResult = WhmcsResultBase;
 
 // ---------------------------------------------------------------------------
 // Misc system-level results used across tools
 // ---------------------------------------------------------------------------
 
-export interface WhmcsSendEmailResult extends WhmcsResultBase {}
-export interface WhmcsLogActivityResult extends WhmcsResultBase {}
-export interface WhmcsDeleteTicketResult extends WhmcsResultBase {}
-export interface WhmcsMergeTicketResult extends WhmcsResultBase {}
-export interface WhmcsCloseClientResult extends WhmcsResultBase {}
+export type WhmcsSendEmailResult = WhmcsResultBase;
+export type WhmcsLogActivityResult = WhmcsResultBase;
+export type WhmcsDeleteTicketResult = WhmcsResultBase;
+export type WhmcsMergeTicketResult = WhmcsResultBase;
+export type WhmcsCloseClientResult = WhmcsResultBase;
 
 /**
  * Generic escape-hatch response for `whmcs_raw_call`. The action name is

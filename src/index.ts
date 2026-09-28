@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @peguesj/whmcs-mcp — entrypoint.
+ * whmcs-bridge-mcp — entrypoint.
  *
  * Responsibilities:
  *  - Load and validate configuration (env vars, mode, enabled domains).
@@ -22,6 +22,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { Server as HttpServer } from "node:http";
 import { createServer as createHttpServer } from "node:http";
 import { randomUUID } from "node:crypto";
@@ -29,35 +30,41 @@ import { randomUUID } from "node:crypto";
 import { loadConfig, type WhmcsMcpConfig } from "./config.js";
 import { WhmcsClient } from "./whmcs-client.js";
 import { logger } from "./logger.js";
-import { isDomainEnabled, isTierAllowed } from "./safety/policy.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
+import { registerTools } from "./tools/registry.js";
+import { registerCustomTools } from "./tools/custom.js";
 
-import { registerSystemTools } from "./tools/system.js";
-import { registerTicketTools } from "./tools/tickets.js";
-import { registerClientTools } from "./tools/clients.js";
-import { registerProductTools } from "./tools/products.js";
-import { registerInvoiceTools } from "./tools/invoices.js";
-import { registerDomainTools } from "./tools/domains.js";
-import { registerOrderTools } from "./tools/orders.js";
+// Every domain tool module registers its tools via `defineTool(...)` as a
+// module-level side effect (see src/tools/registry.ts). Importing them here
+// — purely for that side effect — populates the shared TOOL_REGISTRY before
+// `registerTools(server, ctx)` runs below. Registration order does not
+// encode any safety decision; src/safety/policy.ts is the single source of
+// truth for what gets advertised under the active mode/domain config.
+import "./tools/system.js";
+import "./tools/tickets.js";
+import "./tools/clients.js";
+import "./tools/products.js";
+import "./tools/invoices.js"; // billing tier gated: off unless WHMCS_MCP_MODE=full
+import "./tools/domains.js";
+import "./tools/orders.js";
 
 const SERVER_NAME = "whmcs-mcp";
 const SERVER_VERSION = "0.1.0";
 
-/**
- * Every tool module is handed the same registration context so that mode /
- * domain / tier gating happens in exactly one place (src/safety/policy.ts)
- * instead of being re-implemented per module. A tool module calls
- * `ctx.register(...)` (via the shared registry helper in
- * src/tools/registry.ts) which itself consults `ctx.isDomainEnabled` and
- * `ctx.isTierAllowed` before advertising anything to the client.
- */
-export interface ToolRegistrationContext {
-  server: McpServer;
-  client: WhmcsClient;
-  config: WhmcsMcpConfig;
-  isDomainEnabled: (domain: string) => boolean;
-  isTierAllowed: (tier: "read" | "write" | "billing" | "destructive") => boolean;
+function buildWhmcsClient(config: WhmcsMcpConfig): WhmcsClient {
+  const secrets = config.getSecrets();
+  return new WhmcsClient({
+    apiUrl: config.apiUrl,
+    identifier: secrets.identifier,
+    secret: secrets.secret,
+    ...(secrets.accessKey !== undefined ? { accessKey: secrets.accessKey } : {}),
+    timeoutMs: config.timeoutMs,
+    // WhmcsClient's token bucket is requests/second; config expresses the
+    // operator-facing limit as requests/minute.
+    rateLimitPerSecond: Math.max(1, Math.round(config.rateLimitPerMinute / 60)),
+    allowInsecure: config.allowInsecure,
+  });
 }
 
 function buildServer(config: WhmcsMcpConfig, client: WhmcsClient): McpServer {
@@ -72,25 +79,11 @@ function buildServer(config: WhmcsMcpConfig, client: WhmcsClient): McpServer {
     },
   );
 
-  const ctx: ToolRegistrationContext = {
-    server,
-    client,
-    config,
-    isDomainEnabled: (domain) => isDomainEnabled(domain, config),
-    isTierAllowed: (tier) => isTierAllowed(tier, config.mode),
-  };
-
-  // Domain tool modules. Each module internally no-ops (registers nothing)
-  // for a domain/tier combination the policy disallows, so registration
-  // order here does not encode any safety decision — src/safety/policy.ts
-  // is the single source of truth for what gets advertised.
-  registerSystemTools(ctx);
-  registerTicketTools(ctx);
-  registerClientTools(ctx);
-  registerProductTools(ctx);
-  registerInvoiceTools(ctx); // billing tier gated: off unless WHMCS_MCP_MODE=full
-  registerDomainTools(ctx);
-  registerOrderTools(ctx);
+  // Operator-supplied custom tools (WHMCS_MCP_CUSTOM_TOOLS_FILE) register
+  // via the same defineTool(...) call as every built-in domain module, so
+  // they must run before registerTools(...) populates the McpServer.
+  registerCustomTools({ logger });
+  registerTools(server, { whmcs: client, config });
 
   registerResources(server, client, config);
   registerPrompts(server);
@@ -120,7 +113,8 @@ async function startHttp(
 ): Promise<() => Promise<void>> {
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
-  const httpServer: HttpServer = createHttpServer(async (req, res) => {
+  const httpServer: HttpServer = createHttpServer((req, res) => {
+    void (async () => {
     try {
       const sessionId = req.headers["mcp-session-id"];
       const existing =
@@ -138,13 +132,19 @@ async function startHttp(
         },
       });
 
-      transport.onclose = () => {
+      transport.onclose = (): void => {
         if (transport.sessionId) {
           transports.delete(transport.sessionId);
         }
       };
 
-      await server.connect(transport);
+      // StreamableHTTPServerTransport's `onclose` accessor is typed
+      // `(() => void) | undefined`, which under this project's
+      // `exactOptionalPropertyTypes` is not structurally assignable to the
+      // base `Transport` interface's `onclose?: () => void` — a real SDK
+      // typing quirk, not a design gap here. The runtime shape is a valid
+      // Transport in every way the SDK actually uses.
+      await server.connect(transport as unknown as Transport);
       await transport.handleRequest(req, res);
     } catch (err) {
       logger.error("HTTP transport error", { error: (err as Error).message });
@@ -153,6 +153,7 @@ async function startHttp(
         res.end(JSON.stringify({ error: "internal_error" }));
       }
     }
+    })();
   });
 
   await new Promise<void>((resolve) => {
@@ -160,7 +161,7 @@ async function startHttp(
     // posture: this server never listens on a non-loopback interface.
     httpServer.listen(port, "127.0.0.1", resolve);
   });
-  logger.info(`${SERVER_NAME} v${SERVER_VERSION} listening on http://127.0.0.1:${port}`);
+  logger.info(`${SERVER_NAME} v${SERVER_VERSION} listening on http://127.0.0.1:${String(port)}`);
 
   return async () => {
     for (const transport of transports.values()) {
@@ -168,7 +169,9 @@ async function startHttp(
     }
     await server.close();
     await new Promise<void>((resolve, reject) => {
-      httpServer.close((err) => (err ? reject(err) : resolve()));
+      httpServer.close((err) => {
+        if (err) reject(err); else resolve();
+      });
     });
   };
 }
@@ -183,19 +186,19 @@ function parseHttpPort(argv: string[]): number | undefined {
 
 async function main(): Promise<void> {
   const config = loadConfig(process.env);
-  const client = new WhmcsClient(config);
+  const client = buildWhmcsClient(config);
 
   // Runtime version discovery/compat check (WhmcsDetails). Failures here are
   // logged, never fatal — the server still starts so read-only diagnosis is
   // possible even if the WHMCS API is briefly unreachable at boot.
   try {
-    const details = await client.getSystemDetails();
-    if (details?.version) {
+    const details = await client.call<{ version?: string }>("WhmcsDetails");
+    if (details.version) {
       logger.info(`Connected WHMCS reports version ${details.version}`);
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.warn("Startup WhmcsDetails check failed (continuing)", {
-      error: (err as Error).message,
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -208,14 +211,14 @@ async function main(): Promise<void> {
       : await startStdio(server);
 
   let shuttingDown = false;
-  const handleSignal = (signal: NodeJS.Signals) => {
+  const handleSignal = (signal: "SIGINT" | "SIGTERM") => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info(`Received ${signal}, shutting down ${SERVER_NAME}`);
     shutdown()
       .then(() => process.exit(0))
-      .catch((err) => {
-        logger.error("Error during shutdown", { error: (err as Error).message });
+      .catch((err: unknown) => {
+        logger.error("Error during shutdown", { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       });
   };
@@ -230,8 +233,8 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   // stdout is reserved for MCP stdio framing — never log to it.
-  logger.error("Fatal startup error", { error: (err as Error).message });
+  logger.error("Fatal startup error", { error: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });

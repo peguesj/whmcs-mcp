@@ -23,8 +23,7 @@
 
 import { z } from "zod";
 import {
-  confirmTokenSchema,
-  dryRunSchema,
+  confirmFields,
   idSchema,
   paginationSchema,
 } from "./common.js";
@@ -58,10 +57,11 @@ export const ticketAttachmentTypeSchema = z.enum(["ticket", "reply", "note"]);
 export const ticketsListInputSchema = paginationSchema.extend({
   deptid: idSchema.optional(),
   clientid: idSchema.optional(),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   status: ticketStatusSchema.optional(),
   subject: z.string().optional(),
   ignore_dept_assignments: z.boolean().optional(),
+  ...confirmFields,
 });
 export type TicketsListInput = z.infer<typeof ticketsListInputSchema>;
 
@@ -73,6 +73,7 @@ export const ticketsGetInputSchema = z
     ticketnum: z.string().optional(),
     ticketid: idSchema.optional(),
     repliessort: ticketReplySortSchema.optional(),
+    ...confirmFields,
   })
   .refine((v) => v.ticketnum !== undefined || v.ticketid !== undefined, {
     message: "Provide either ticketnum or ticketid",
@@ -90,7 +91,7 @@ export const ticketsCreateInputSchema = z
     clientid: idSchema.optional(),
     contactid: idSchema.optional(),
     name: z.string().optional(),
-    email: z.string().email().optional(),
+    email: z.email().optional(),
     priority: ticketPrioritySchema.optional(),
     serviceid: idSchema.optional(),
     domainid: idSchema.optional(),
@@ -99,7 +100,7 @@ export const ticketsCreateInputSchema = z
     // Serialized to WHMCS's base64-encoded custom field map by the tool
     // handler; kept as a plain string record at the schema boundary.
     customfields: z.record(z.string(), z.string()).optional(),
-    dryRun: dryRunSchema,
+    ...confirmFields,
   })
   .refine(
     (v) =>
@@ -128,7 +129,7 @@ export const ticketsReplyInputSchema = z.object({
   // ISO 8601 or WHMCS "YYYY-MM-DD HH:MM:SS"; validated loosely here, the
   // client layer normalizes to WHMCS's expected format.
   created: z.string().optional(),
-  dryRun: dryRunSchema,
+  ...confirmFields,
 });
 export type TicketsReplyInput = z.infer<typeof ticketsReplyInputSchema>;
 
@@ -141,6 +142,7 @@ export const ticketsAddNoteInputSchema = z
     ticketnum: z.string().optional(),
     message: z.string().min(1),
     markdown: z.boolean().optional(),
+    ...confirmFields,
   })
   .refine((v) => v.ticketid !== undefined || v.ticketnum !== undefined, {
     message: "Provide either ticketid or ticketnum",
@@ -152,6 +154,7 @@ export type TicketsAddNoteInput = z.infer<typeof ticketsAddNoteInputSchema>;
 // ---------------------------------------------------------------------------
 export const ticketsGetNotesInputSchema = z.object({
   ticketid: idSchema,
+  ...confirmFields,
 });
 export type TicketsGetNotesInput = z.infer<typeof ticketsGetNotesInputSchema>;
 
@@ -167,10 +170,10 @@ export const ticketsUpdateInputSchema = z.object({
   /** Admin id to flag this ticket to, per WHMCS's `flag` parameter. */
   flag: idSchema.optional(),
   userid: idSchema.optional(),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   cc: z.string().optional(),
   removeFlag: z.boolean().optional(),
-  dryRun: dryRunSchema,
+  ...confirmFields,
 });
 export type TicketsUpdateInput = z.infer<typeof ticketsUpdateInputSchema>;
 
@@ -181,6 +184,7 @@ export const ticketsUpdateReplyInputSchema = z.object({
   replyid: idSchema,
   message: z.string().min(1),
   markdown: z.boolean().optional(),
+  ...confirmFields,
 });
 export type TicketsUpdateReplyInput = z.infer<
   typeof ticketsUpdateReplyInputSchema
@@ -195,8 +199,7 @@ export const ticketsMergeInputSchema = z.object({
   /** CSV list of ticket ids to merge into `ticketid`. */
   mergeticketids: z.string().min(1),
   newsubject: z.string().optional(),
-  /** Required on the second call, echoing the token from the preview call. */
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type TicketsMergeInput = z.infer<typeof ticketsMergeInputSchema>;
 
@@ -205,7 +208,7 @@ export type TicketsMergeInput = z.infer<typeof ticketsMergeInputSchema>;
 // ---------------------------------------------------------------------------
 export const ticketsDeleteInputSchema = z.object({
   ticketid: idSchema,
-  confirmToken: confirmTokenSchema,
+  ...confirmFields,
 });
 export type TicketsDeleteInput = z.infer<typeof ticketsDeleteInputSchema>;
 
@@ -216,6 +219,7 @@ export const ticketsGetAttachmentInputSchema = z.object({
   relatedid: idSchema,
   type: ticketAttachmentTypeSchema,
   index: z.number().int().min(0),
+  ...confirmFields,
 });
 export type TicketsGetAttachmentInput = z.infer<
   typeof ticketsGetAttachmentInputSchema
@@ -227,6 +231,7 @@ export type TicketsGetAttachmentInput = z.infer<
 export const ticketsGetCountsInputSchema = z.object({
   ignoreDepartmentAssignments: z.boolean().optional(),
   includeCountsByStatus: z.boolean().optional(),
+  ...confirmFields,
 });
 export type TicketsGetCountsInput = z.infer<typeof ticketsGetCountsInputSchema>;
 
@@ -235,6 +240,7 @@ export type TicketsGetCountsInput = z.infer<typeof ticketsGetCountsInputSchema>;
 // ---------------------------------------------------------------------------
 export const ticketsGetDepartmentsInputSchema = z.object({
   ignore_dept_assignments: z.boolean().optional(),
+  ...confirmFields,
 });
 export type TicketsGetDepartmentsInput = z.infer<
   typeof ticketsGetDepartmentsInputSchema
@@ -245,6 +251,7 @@ export type TicketsGetDepartmentsInput = z.infer<
 // ---------------------------------------------------------------------------
 export const ticketsGetStatusesInputSchema = z.object({
   deptid: idSchema.optional(),
+  ...confirmFields,
 });
 export type TicketsGetStatusesInput = z.infer<
   typeof ticketsGetStatusesInputSchema
@@ -255,6 +262,7 @@ export type TicketsGetStatusesInput = z.infer<
 // ---------------------------------------------------------------------------
 export const ticketsGetPredefinedRepliesInputSchema = z.object({
   catid: idSchema.optional(),
+  ...confirmFields,
 });
 export type TicketsGetPredefinedRepliesInput = z.infer<
   typeof ticketsGetPredefinedRepliesInputSchema
@@ -273,7 +281,7 @@ export interface TicketToolDefinition {
   name: string;
   whmcsAction: string;
   tier: ToolTier;
-  schema: z.ZodTypeAny;
+  schema: z.ZodType;
 }
 
 export const TICKETS_TOOL_DEFINITIONS: readonly TicketToolDefinition[] = [

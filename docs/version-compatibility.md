@@ -1,6 +1,6 @@
 # WHMCS Version Compatibility
 
-`@peguesj/whmcs-mcp` targets the WHMCS **External API** (`POST {WHMCS_API_URL}/includes/api.php`,
+`whmcs-bridge-mcp` targets the WHMCS **External API** (`POST {WHMCS_API_URL}/includes/api.php`,
 `identifier`/`secret` auth, `responsetype=json`). This document records what is verified, what is
 assumed, and how the server protects itself against an unexpected or unsupported WHMCS version at
 runtime.

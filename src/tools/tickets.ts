@@ -9,7 +9,7 @@
  *   - WHMCS_MCP_MODE / WHMCS_MCP_ENABLE_DOMAINS advertisement filtering
  *   - tier gating (read | write | billing | destructive)
  *   - dryRun short-circuiting for mutating tools (no network call, returns a preview)
- *   - two-step confirmToken flow for `confirm: true` tools
+ *   - two-step confirmToken flow for destructive tools
  *   - deep redaction of the WHMCS response before it reaches the model
  *
  * This file owns every `toolList` entry from the architecture plan whose
@@ -24,55 +24,42 @@
  * directly.
  */
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { defineTool } from "./registry.js";
-import type { WhmcsClient } from "../whmcs-client.js";
+import { defineTool, type ToolContext, type ToolHandlerResult } from "./registry.js";
 import {
-  ticketsListSchema,
-  ticketsGetSchema,
-  ticketsCreateSchema,
-  ticketsReplySchema,
-  ticketsAddNoteSchema,
-  ticketsGetNotesSchema,
-  ticketsUpdateSchema,
-  ticketsUpdateReplySchema,
-  ticketsMergeSchema,
-  ticketsDeleteSchema,
-  ticketsGetAttachmentSchema,
-  ticketsGetCountsSchema,
-  ticketsGetDepartmentsSchema,
-  ticketsGetStatusesSchema,
-  ticketsGetPredefinedRepliesSchema,
+  ticketsListInputSchema,
+  ticketsGetInputSchema,
+  ticketsCreateInputSchema,
+  ticketsReplyInputSchema,
+  ticketsAddNoteInputSchema,
+  ticketsGetNotesInputSchema,
+  ticketsUpdateInputSchema,
+  ticketsUpdateReplyInputSchema,
+  ticketsMergeInputSchema,
+  ticketsDeleteInputSchema,
+  ticketsGetAttachmentInputSchema,
+  ticketsGetCountsInputSchema,
+  ticketsGetDepartmentsInputSchema,
+  ticketsGetStatusesInputSchema,
+  ticketsGetPredefinedRepliesInputSchema,
 } from "../schemas/tickets.js";
+import { unwrapCollection } from "../whmcs-client.js";
 
-/**
- * Registers every tickets_* tool on the given MCP server instance.
- *
- * Called once from src/index.ts after the WhmcsClient and mode/domain
- * filters have been resolved. `defineTool` itself decides whether a given
- * tool is actually advertised (based on tier + WHMCS_MCP_MODE +
- * WHMCS_MCP_ENABLE_DOMAINS), so this function unconditionally attempts to
- * register the full tickets catalog.
- */
-export function registerTicketTools(server: McpServer, client: WhmcsClient): void {
-  // ---------------------------------------------------------------------
-  // Reads
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Reads
+// ---------------------------------------------------------------------------
 
-  defineTool(server, client, {
-    name: "tickets_list",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTickets",
-    schema: ticketsListSchema,
-    annotations: {
-      title: "List support tickets",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
+defineTool({
+  name: "tickets_list",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTickets",
+  description: "List support tickets, filterable by department, client, email, status, or subject.",
+  inputSchema: ticketsListInputSchema,
+  annotations: { title: "List support tickets", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
     // GetTickets returns { tickets: { ticket: [...] }, numreturned, totalresults, ... }.
-    // The client's response normalizer flattens tickets.ticket -> tickets[].
-    serialize: (input) => ({
+    // Flatten tickets.ticket -> tickets[] so every caller gets a plain array.
+    const res = await ctx.whmcs.call<{ tickets?: unknown }>("GetTickets", {
       limitstart: input.limitstart,
       limitnum: input.limitnum,
       deptid: input.deptid,
@@ -81,144 +68,143 @@ export function registerTicketTools(server: McpServer, client: WhmcsClient): voi
       status: input.status,
       subject: input.subject,
       ignore_dept_assignments: input.ignore_dept_assignments,
-    }),
-  });
+    });
+    const tickets = unwrapCollection(res.tickets, "ticket");
+    return { data: { ...res, tickets } };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTicket",
-    schema: ticketsGetSchema,
-    annotations: {
-      title: "Get a single ticket (with replies)",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_get",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTicket",
+  description: "Get a single ticket, including its replies, by ticketid or ticketnum.",
+  inputSchema: ticketsGetInputSchema,
+  annotations: { title: "Get a single ticket (with replies)", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetTicket", {
       ticketnum: input.ticketnum,
       ticketid: input.ticketid,
       repliessort: input.repliessort,
-    }),
-  });
+    });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_notes",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTicketNotes",
-    schema: ticketsGetNotesSchema,
-    annotations: {
-      title: "Get internal admin notes for a ticket",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({ ticketid: input.ticketid }),
-  });
+defineTool({
+  name: "tickets_get_notes",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTicketNotes",
+  description: "Get internal admin notes for a ticket.",
+  inputSchema: ticketsGetNotesInputSchema,
+  annotations: { title: "Get internal admin notes for a ticket", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetTicketNotes", { ticketid: input.ticketid });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_attachment",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTicketAttachment",
-    schema: ticketsGetAttachmentSchema,
-    annotations: {
-      title: "Fetch a ticket/reply/note attachment",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
+defineTool({
+  name: "tickets_get_attachment",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTicketAttachment",
+  description: "Fetch a ticket, reply, or note attachment.",
+  inputSchema: ticketsGetAttachmentInputSchema,
+  annotations: { title: "Fetch a ticket/reply/note attachment", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
     // WHMCS returns { data: { filename, data: <base64> } }. The registry's
     // redaction layer size-caps base64 payloads (WHMCS_MCP_MAX_ATTACHMENT_BYTES)
     // before the result is handed to the model.
-    serialize: (input) => ({
+    const res = await ctx.whmcs.call("GetTicketAttachment", {
       relatedid: input.relatedid,
       type: input.type,
       index: input.index,
-    }),
-  });
+    });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_counts",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTicketCounts",
-    schema: ticketsGetCountsSchema,
-    annotations: {
-      title: "Get open/answered/etc. ticket counts",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_get_counts",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTicketCounts",
+  description: "Get open/answered/etc. ticket counts.",
+  inputSchema: ticketsGetCountsInputSchema,
+  annotations: { title: "Get open/answered/etc. ticket counts", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetTicketCounts", {
       ignoreDepartmentAssignments: input.ignoreDepartmentAssignments,
       includeCountsByStatus: input.includeCountsByStatus,
-    }),
-  });
+    });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_departments",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetSupportDepartments",
-    schema: ticketsGetDepartmentsSchema,
-    annotations: {
-      title: "List support departments",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_get_departments",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetSupportDepartments",
+  description: "List support departments.",
+  inputSchema: ticketsGetDepartmentsInputSchema,
+  annotations: { title: "List support departments", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetSupportDepartments", {
       ignore_dept_assignments: input.ignore_dept_assignments,
-    }),
-  });
+    });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_statuses",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetSupportStatuses",
-    schema: ticketsGetStatusesSchema,
-    annotations: {
-      title: "List support ticket statuses",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({ deptid: input.deptid }),
-  });
+defineTool({
+  name: "tickets_get_statuses",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetSupportStatuses",
+  description: "List support ticket statuses.",
+  inputSchema: ticketsGetStatusesInputSchema,
+  annotations: { title: "List support ticket statuses", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetSupportStatuses", { deptid: input.deptid });
+    return { data: res };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_get_predefined_replies",
-    domain: "tickets",
-    tier: "read",
-    whmcsAction: "GetTicketPredefinedReplies",
-    schema: ticketsGetPredefinedRepliesSchema,
-    annotations: {
-      title: "List predefined ticket replies",
-      readOnlyHint: true,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({ catid: input.catid }),
-  });
+defineTool({
+  name: "tickets_get_predefined_replies",
+  domain: "tickets",
+  tier: "read",
+  whmcsAction: "GetTicketPredefinedReplies",
+  description: "List predefined ticket replies.",
+  inputSchema: ticketsGetPredefinedRepliesInputSchema,
+  annotations: { title: "List predefined ticket replies", readOnlyHint: true, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("GetTicketPredefinedReplies", { catid: input.catid });
+    return { data: res };
+  },
+});
 
-  // ---------------------------------------------------------------------
-  // Writes (tier: write) — advertised in WHMCS_MCP_MODE=write|full
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Writes (tier: write) — advertised in WHMCS_MCP_MODE=write|full
+// ---------------------------------------------------------------------------
 
-  defineTool(server, client, {
-    name: "tickets_create",
-    domain: "tickets",
-    tier: "write",
-    whmcsAction: "OpenTicket",
-    schema: ticketsCreateSchema,
-    supportsDryRun: true,
-    annotations: {
-      title: "Open a new support ticket",
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-    },
+defineTool({
+  name: "tickets_create",
+  domain: "tickets",
+  tier: "write",
+  whmcsAction: "OpenTicket",
+  description: "Open a new support ticket.",
+  inputSchema: ticketsCreateInputSchema,
+  annotations: { title: "Open a new support ticket", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
     // customfields is documented as a base64-encoded serialized-PHP-array
     // string in the External API; the schema layer owns building that value
     // so this file only forwards it verbatim.
-    serialize: (input) => ({
+    const res = await ctx.whmcs.call("OpenTicket", {
       deptid: input.deptid,
       subject: input.subject,
       message: input.message,
@@ -231,24 +217,24 @@ export function registerTicketTools(server: McpServer, client: WhmcsClient): voi
       domainid: input.domainid,
       admin: input.admin,
       markdown: input.markdown,
-      customfields: input.customfields,
-    }),
-  });
+      customfields: input.customfields
+        ? Buffer.from(JSON.stringify(input.customfields), "utf-8").toString("base64")
+        : undefined,
+    });
+    return { data: res, summary: `Ticket opened: "${input.subject}".` };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_reply",
-    domain: "tickets",
-    tier: "write",
-    whmcsAction: "AddTicketReply",
-    schema: ticketsReplySchema,
-    supportsDryRun: true,
-    annotations: {
-      title: "Reply to a support ticket",
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_reply",
+  domain: "tickets",
+  tier: "write",
+  whmcsAction: "AddTicketReply",
+  description: "Reply to a support ticket.",
+  inputSchema: ticketsReplyInputSchema,
+  annotations: { title: "Reply to a support ticket", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("AddTicketReply", {
       ticketid: input.ticketid,
       message: input.message,
       adminusername: input.adminusername,
@@ -258,44 +244,45 @@ export function registerTicketTools(server: McpServer, client: WhmcsClient): voi
       markdown: input.markdown,
       noemail: input.noemail,
       created: input.created,
-    }),
-  });
+    });
+    return { data: res, summary: `Reply added to ticket ${String(input.ticketid)}.` };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_add_note",
-    domain: "tickets",
-    tier: "write",
-    whmcsAction: "AddTicketNote",
-    schema: ticketsAddNoteSchema,
-    supportsDryRun: true,
-    annotations: {
-      title: "Add an internal note to a ticket",
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_add_note",
+  domain: "tickets",
+  tier: "write",
+  whmcsAction: "AddTicketNote",
+  description: "Add an internal note to a ticket.",
+  inputSchema: ticketsAddNoteInputSchema,
+  annotations: { title: "Add an internal note to a ticket", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("AddTicketNote", {
       ticketid: input.ticketid,
       ticketnum: input.ticketnum,
       message: input.message,
       markdown: input.markdown,
-    }),
-  });
+    });
+    return { data: res, summary: `Note added to ticket ${String(input.ticketid ?? input.ticketnum)}.` };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_update",
-    domain: "tickets",
-    tier: "write",
-    whmcsAction: "UpdateTicket",
-    schema: ticketsUpdateSchema,
-    supportsDryRun: true,
-    annotations: {
-      title: "Update ticket metadata (status/department/priority/flag)",
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_update",
+  domain: "tickets",
+  tier: "write",
+  whmcsAction: "UpdateTicket",
+  description: "Update ticket metadata (status/department/priority/flag).",
+  inputSchema: ticketsUpdateInputSchema,
+  annotations: {
+    title: "Update ticket metadata (status/department/priority/flag)",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+  },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("UpdateTicket", {
       ticketid: input.ticketid,
       status: input.status,
       deptid: input.deptid,
@@ -306,74 +293,67 @@ export function registerTicketTools(server: McpServer, client: WhmcsClient): voi
       email: input.email,
       cc: input.cc,
       removeFlag: input.removeFlag,
-    }),
-  });
+    });
+    return { data: res, summary: `Ticket ${String(input.ticketid)} updated.` };
+  },
+});
 
-  defineTool(server, client, {
-    name: "tickets_update_reply",
-    domain: "tickets",
-    tier: "write",
-    whmcsAction: "UpdateTicketReply",
-    schema: ticketsUpdateReplySchema,
-    supportsDryRun: true,
-    annotations: {
-      title: "Edit an existing ticket reply",
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-    },
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_update_reply",
+  domain: "tickets",
+  tier: "write",
+  whmcsAction: "UpdateTicketReply",
+  description: "Edit an existing ticket reply.",
+  inputSchema: ticketsUpdateReplyInputSchema,
+  annotations: { title: "Edit an existing ticket reply", readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("UpdateTicketReply", {
       replyid: input.replyid,
       message: input.message,
       markdown: input.markdown,
-    }),
-  });
+    });
+    return { data: res, summary: `Reply ${String(input.replyid)} updated.` };
+  },
+});
 
-  // ---------------------------------------------------------------------
-  // Destructive (tier: destructive) — always confirm-gated, regardless of mode
-  // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Destructive (tier: destructive) — always confirm-gated, regardless of mode
+// ---------------------------------------------------------------------------
 
-  defineTool(server, client, {
-    name: "tickets_merge",
-    domain: "tickets",
-    tier: "destructive",
-    whmcsAction: "MergeTicket",
-    schema: ticketsMergeSchema,
-    requiresConfirm: true,
-    annotations: {
-      title: "Merge one or more tickets into a target ticket",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-    },
-    // First call (no confirmToken): registry short-circuits before this
-    // serializer runs and returns a preview + confirmToken instead.
-    serialize: (input) => ({
+defineTool({
+  name: "tickets_merge",
+  domain: "tickets",
+  tier: "destructive",
+  whmcsAction: "MergeTicket",
+  description: "Merge one or more tickets into a target ticket.",
+  inputSchema: ticketsMergeInputSchema,
+  annotations: { title: "Merge one or more tickets into a target ticket", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("MergeTicket", {
       ticketid: input.ticketid,
       mergeticketids: input.mergeticketids,
       newsubject: input.newsubject,
-    }),
-    describePreview: (input) =>
-      `Merge ticket(s) [${input.mergeticketids}] into ticket #${input.ticketid}` +
-      (input.newsubject ? ` with new subject "${input.newsubject}"` : "") +
-      `. This cannot be undone.`,
-  });
+    });
+    return { data: res, summary: `Ticket(s) [${input.mergeticketids}] merged into ticket ${String(input.ticketid)}.` };
+  },
+  buildConfirmationPreview: (input) =>
+    `Merge ticket(s) [${input.mergeticketids}] into ticket #${String(input.ticketid)}` +
+    (input.newsubject ? ` with new subject "${input.newsubject}"` : "") +
+    `. This cannot be undone.`,
+});
 
-  defineTool(server, client, {
-    name: "tickets_delete",
-    domain: "tickets",
-    tier: "destructive",
-    whmcsAction: "DeleteTicket",
-    schema: ticketsDeleteSchema,
-    requiresConfirm: true,
-    annotations: {
-      title: "Permanently delete a ticket",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-    },
-    serialize: (input) => ({ ticketid: input.ticketid }),
-    describePreview: (input) =>
-      `Permanently delete ticket #${input.ticketid}, including all replies and notes. This cannot be undone.`,
-  });
-}
+defineTool({
+  name: "tickets_delete",
+  domain: "tickets",
+  tier: "destructive",
+  whmcsAction: "DeleteTicket",
+  description: "Permanently delete a ticket.",
+  inputSchema: ticketsDeleteInputSchema,
+  annotations: { title: "Permanently delete a ticket", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
+    const res = await ctx.whmcs.call("DeleteTicket", { ticketid: input.ticketid });
+    return { data: res, summary: `Ticket ${String(input.ticketid)} deleted.` };
+  },
+  buildConfirmationPreview: (input) =>
+    `Permanently delete ticket #${String(input.ticketid)}, including all replies and notes. This cannot be undone.`,
+});

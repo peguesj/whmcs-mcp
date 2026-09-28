@@ -78,7 +78,7 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (_input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("WhmcsDetails", {});
+    const res = await ctx.whmcs.call<Record<string, unknown>>("WhmcsDetails", {});
     const version = typeof res.version === "string" ? res.version : undefined;
     return {
       data: res,
@@ -124,7 +124,7 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("GetActivityLog", {
+    const res = await ctx.whmcs.call<Record<string, unknown>>("GetActivityLog", {
       limitstart: input.limitstart,
       limitnum: input.limitnum,
       clientid: input.clientid,
@@ -137,7 +137,7 @@ defineTool({
     const activity = unwrapCollection<Record<string, unknown>>(res.activity, "entry");
     return {
       data: { ...res, activity },
-      summary: `Returned ${activity.length} activity log entr${activity.length === 1 ? "y" : "ies"}.`,
+      summary: `Returned ${String(activity.length)} activity log entr${activity.length === 1 ? "y" : "ies"}.`,
     };
   },
 });
@@ -174,7 +174,7 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("GetToDoItems", {
+    const res = await ctx.whmcs.call<Record<string, unknown>>("GetToDoItems", {
       status: input.status,
       limitstart: input.limitstart,
       limitnum: input.limitnum,
@@ -182,7 +182,7 @@ defineTool({
     const items = unwrapCollection<Record<string, unknown>>(res.items, "item");
     return {
       data: { ...res, items },
-      summary: `Returned ${items.length} to-do item${items.length === 1 ? "" : "s"}.`,
+      summary: `Returned ${String(items.length)} to-do item${items.length === 1 ? "" : "s"}.`,
     };
   },
 });
@@ -201,14 +201,14 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("GetEmailTemplates", {
+    const res = await ctx.whmcs.call<Record<string, unknown>>("GetEmailTemplates", {
       type: input.type,
       language: input.language,
     });
     const templates = unwrapCollection<Record<string, unknown>>(res.templates, "template");
     return {
       data: { ...res, templates },
-      summary: `Returned ${templates.length} email template${templates.length === 1 ? "" : "s"}.`,
+      summary: `Returned ${String(templates.length)} email template${templates.length === 1 ? "" : "s"}.`,
     };
   },
 });
@@ -226,7 +226,7 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (_input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("GetPaymentMethods", {});
+    const res = await ctx.whmcs.call<Record<string, unknown>>("GetPaymentMethods", {});
     const paymentmethods = unwrapCollection<Record<string, unknown>>(
       res.paymentmethods,
       "paymentmethod",
@@ -248,7 +248,7 @@ defineTool({
     idempotentHint: true,
   },
   handler: async (_input, ctx: ToolContext): Promise<ToolHandlerResult> => {
-    const res = await ctx.whmcs.call("GetCurrencies", {});
+    const res = await ctx.whmcs.call<Record<string, unknown>>("GetCurrencies", {});
     const currencies = unwrapCollection<Record<string, unknown>>(res.currencies, "currency");
     return { data: { ...res, currencies } };
   },
@@ -277,21 +277,25 @@ defineTool({
   ): Promise<ToolHandlerResult> => {
     const params =
       input.mode === "template"
-        ? { id: input.id, messagename: input.messagename, customvars: input.customvars }
+        ? {
+            id: input.id,
+            messagename: input.messagename,
+            ...(input.customvars !== undefined ? { customvars: input.customvars } : {}),
+          }
         : {
             id: input.id,
             customtype: input.customtype,
             customsubject: input.customsubject,
             custommessage: input.custommessage,
-            customvars: input.customvars,
+            ...(input.customvars !== undefined ? { customvars: input.customvars } : {}),
           };
     const res = await ctx.whmcs.call("SendEmail", serializeCustomvars(params));
     return {
       data: res,
       summary:
         input.mode === "template"
-          ? `Sent template "${input.messagename}" for entity id ${input.id}.`
-          : `Sent ad hoc email (type "${input.customtype}") for entity id ${input.id}.`,
+          ? `Sent template "${input.messagename}" for entity id ${String(input.id)}.`
+          : `Sent ad hoc email (type "${input.customtype}") for entity id ${String(input.id)}.`,
     };
   },
 });

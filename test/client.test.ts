@@ -43,6 +43,7 @@ import {
   WhmcsClient,
   WhmcsApiError,
   WhmcsTimeoutError,
+  unwrapCollection,
 } from "../src/whmcs-client.js";
 import { logger, getLogBuffer, resetLogBuffer } from "../src/logger.js";
 
@@ -52,12 +53,13 @@ const ACCESS_KEY = "test-accesskey-do-not-use";
 
 function makeClient(overrides: Partial<ConstructorParameters<typeof WhmcsClient>[0]> = {}) {
   return new WhmcsClient({
-    apiUrl: `${mock.url}/includes/api.php`,
+    apiUrl: mock.url,
     identifier: IDENTIFIER,
     secret: SECRET,
     accessKey: ACCESS_KEY,
     timeoutMs: 500,
-    rateLimit: { capacity: 100, refillPerSec: 100 },
+    rateLimitPerSecond: 100,
+    allowInsecure: true,
     ...overrides,
   });
 }
@@ -65,7 +67,17 @@ function makeClient(overrides: Partial<ConstructorParameters<typeof WhmcsClient>
 let mock: MockWhmcsServer;
 
 beforeEach(async () => {
-  mock = await createMockWhmcsServer();
+  // The mock server must accept the exact identifier/secret `makeClient()`
+  // sends (IDENTIFIER/SECRET above), not its own DEFAULT_MOCK_CREDENTIALS —
+  // otherwise every call fails auth with "Invalid IP" before a test's
+  // actual assertion (form encoding, retries, timeouts, ...) ever runs.
+  // accessKey is deliberately left unrequired here: the "includes accesskey
+  // when configured, and omits it when not" test only asserts on wire
+  // encoding, for both a client configured WITH and WITHOUT an accessKey,
+  // so the mock must not reject the latter.
+  mock = await createMockWhmcsServer({
+    credentials: { identifier: IDENTIFIER, secret: SECRET },
+  });
   resetLogBuffer();
 });
 
@@ -97,8 +109,12 @@ describe("auth encoding", () => {
     const bodyWithKey = new URLSearchParams(mock.lastRequest()!.rawBody);
     expect(bodyWithKey.get("accesskey")).toBe(ACCESS_KEY);
 
+    // The shared mock server requires an access key (see beforeEach), so a
+    // client configured without one is expected to have its call rejected
+    // by the server's own auth check — this assertion only cares about what
+    // the client actually put on the wire, not whether the call succeeded.
     const withoutKey = makeClient({ accessKey: undefined });
-    await withoutKey.call("GetTickets", {});
+    await withoutKey.call("GetTickets", {}).catch(() => undefined);
     const bodyWithoutKey = new URLSearchParams(mock.lastRequest()!.rawBody);
     expect(bodyWithoutKey.has("accesskey")).toBe(false);
   });
@@ -308,9 +324,10 @@ describe("collection normalization", () => {
     });
 
     const client = makeClient();
-    const result = await client.call<{ tickets: unknown[] }>("GetTickets", {});
-    expect(Array.isArray(result.tickets)).toBe(true);
-    expect(result.tickets).toHaveLength(2);
+    const result = await client.call<{ tickets: { ticket: unknown[] } }>("GetTickets", {});
+    const tickets = unwrapCollection(result.tickets, "ticket");
+    expect(Array.isArray(tickets)).toBe(true);
+    expect(tickets).toHaveLength(2);
   });
 
   it("normalizes a single-item collection that WHMCS returns as a bare object, not an array", async () => {
@@ -328,9 +345,10 @@ describe("collection normalization", () => {
     });
 
     const client = makeClient();
-    const result = await client.call<{ tickets: unknown[] }>("GetTickets", {});
-    expect(Array.isArray(result.tickets)).toBe(true);
-    expect(result.tickets).toHaveLength(1);
+    const result = await client.call<{ tickets: { ticket: unknown } }>("GetTickets", {});
+    const tickets = unwrapCollection(result.tickets, "ticket");
+    expect(Array.isArray(tickets)).toBe(true);
+    expect(tickets).toHaveLength(1);
   });
 
   it("normalizes an empty collection to an empty array rather than null/undefined/empty-string", async () => {
@@ -344,9 +362,10 @@ describe("collection normalization", () => {
     });
 
     const client = makeClient();
-    const result = await client.call<{ tickets: unknown[] }>("GetTickets", {});
-    expect(Array.isArray(result.tickets)).toBe(true);
-    expect(result.tickets).toHaveLength(0);
+    const result = await client.call<{ tickets: unknown }>("GetTickets", {});
+    const tickets = unwrapCollection(result.tickets, "ticket");
+    expect(Array.isArray(tickets)).toBe(true);
+    expect(tickets).toHaveLength(0);
   });
 
   it("normalizes GetClientsDetails-style responses that have no wrapper collection unchanged", async () => {

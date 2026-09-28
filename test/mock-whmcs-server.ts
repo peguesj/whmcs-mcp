@@ -138,6 +138,14 @@ export interface QueuedResponse {
   rawBody?: string;
   /** Response Content-Type. Defaults to "application/json; charset=utf-8" when `body` is set, else "text/plain". */
   contentType?: string;
+  /**
+   * Artificial delay (ms) before this specific queued response is sent,
+   * applied in addition to the server-wide `latencyMs` option. Used by
+   * timeout contract tests to simulate a WHMCS response that arrives after
+   * the client's configured `timeoutMs` has elapsed, without slowing down
+   * every other test via the server-wide latency knob.
+   */
+  delayMs?: number;
 }
 
 export interface MockWhmcsServer {
@@ -928,6 +936,14 @@ export async function startMockWhmcsServer(
 
   /** Sends a fully-scripted `QueuedResponse` verbatim, bypassing auth/fixtures. */
   function sendQueuedResponse(res: ServerResponse, queued: QueuedResponse): void {
+    if (queued.delayMs && queued.delayMs > 0) {
+      setTimeout(() => sendQueuedResponseNow(res, queued), queued.delayMs);
+      return;
+    }
+    sendQueuedResponseNow(res, queued);
+  }
+
+  function sendQueuedResponseNow(res: ServerResponse, queued: QueuedResponse): void {
     const status = queued.status ?? 200;
     if (queued.body !== undefined) {
       jsonResponse(res, status, queued.body);

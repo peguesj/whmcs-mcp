@@ -69,7 +69,6 @@ import type {
   Invoice,
   InvoiceItemRaw,
   TransactionRaw,
-  Transaction,
   WhmcsGetInvoicesRaw,
   WhmcsGetInvoiceRaw,
   WhmcsCreateInvoiceResult,
@@ -134,10 +133,10 @@ function serializeNewInvoiceLineItems(
   const out: Record<string, string> = {};
   items.forEach((item, offset) => {
     const n = offset + 1;
-    out[`newitemdescription${n}`] = item.description;
-    out[`newitemamount${n}`] = item.amount;
+    out[`newitemdescription${String(n)}`] = item.description;
+    out[`newitemamount${String(n)}`] = item.amount;
     if (item.taxed !== undefined) {
-      out[`newitemtaxed${n}`] = item.taxed ? "1" : "0";
+      out[`newitemtaxed${String(n)}`] = item.taxed ? "1" : "0";
     }
   });
   return out;
@@ -156,7 +155,7 @@ function serializeNewInvoiceLineItems(
 function serializeDeleteLineIds(ids: readonly number[]): Record<string, string> {
   const out: Record<string, string> = {};
   ids.forEach((id, index) => {
-    out[`deletelineid[${index}]`] = String(id);
+    out[`deletelineid[${String(index)}]`] = String(id);
   });
   return out;
 }
@@ -194,7 +193,7 @@ defineTool({
         startnumber: raw.startnumber,
         numreturned: raw.numreturned,
       },
-      summary: `Found ${invoices.length} invoice(s).`,
+      summary: `Found ${String(invoices.length)} invoice(s).`,
     };
   },
 });
@@ -218,7 +217,7 @@ defineTool({
     const invoice = normalizeInvoice(raw);
     return {
       data: invoice,
-      summary: `Invoice #${invoice.invoicenum ?? invoice.invoiceid}: ${invoice.status}, balance ${
+      summary: `Invoice #${String(invoice.invoicenum ?? invoice.invoiceid)}: ${invoice.status}, balance ${
         invoice.balance ?? "?"
       }.`,
     };
@@ -242,8 +241,8 @@ defineTool({
     idempotentHint: false,
   },
   buildConfirmationPreview: (input) =>
-    `Create a ${input.status ?? "Unpaid"} invoice for client #${input.userid} with ` +
-    `${input.items.length} line item(s)` +
+    `Create a ${input.status ?? "Unpaid"} invoice for client #${String(input.userid)} with ` +
+    `${String(input.items.length)} line item(s)` +
     (input.sendinvoice ? ", and email it to the client immediately" : "") +
     ".",
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
@@ -261,7 +260,7 @@ defineTool({
     });
     return {
       data: { invoiceid: raw.invoiceid },
-      summary: `Created invoice #${raw.invoiceid}.`,
+      summary: `Created invoice #${String(raw.invoiceid)}.`,
     };
   },
 });
@@ -283,7 +282,7 @@ defineTool({
     idempotentHint: true,
   },
   buildConfirmationPreview: (input) =>
-    `Update invoice #${input.invoiceid}` +
+    `Update invoice #${String(input.invoiceid)}` +
     (input.status ? ` (status -> ${input.status})` : "") +
     (input.publish || input.publishandsendemail ? ", publishing it" : "") +
     (input.publishandsendemail ? " and emailing the client" : "") +
@@ -305,7 +304,7 @@ defineTool({
     });
     return {
       data: raw,
-      summary: `Updated invoice #${input.invoiceid}.`,
+      summary: `Updated invoice #${String(input.invoiceid)}.`,
     };
   },
 });
@@ -325,7 +324,7 @@ defineTool({
     idempotentHint: false,
   },
   buildConfirmationPreview: (input) =>
-    `Record a payment of ${input.amount ?? "the full balance"} on invoice #${input.invoiceid} ` +
+    `Record a payment of ${input.amount ?? "the full balance"} on invoice #${String(input.invoiceid)} ` +
     `via gateway "${input.gateway}" (transaction ${input.transid}).`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsAddInvoicePaymentResult>("AddInvoicePayment", {
@@ -339,7 +338,7 @@ defineTool({
     });
     return {
       data: raw,
-      summary: `Recorded payment on invoice #${input.invoiceid}.`,
+      summary: `Recorded payment on invoice #${String(input.invoiceid)}.`,
     };
   },
 });
@@ -359,7 +358,7 @@ defineTool({
   },
   buildConfirmationPreview: (input) =>
     `Apply ${input.amount === "full" ? "the full available" : input.amount} credit to invoice #${
-      input.invoiceid
+      String(input.invoiceid)
     }.`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsApplyCreditResult>("ApplyCredit", {
@@ -369,7 +368,7 @@ defineTool({
     });
     return {
       data: raw,
-      summary: `Applied credit to invoice #${input.invoiceid}.`,
+      summary: `Applied credit to invoice #${String(input.invoiceid)}.`,
     };
   },
 });
@@ -390,7 +389,7 @@ defineTool({
     idempotentHint: false,
   },
   buildConfirmationPreview: (input) =>
-    `Attempt to capture payment for invoice #${input.invoiceid} using the client's stored ` +
+    `Attempt to capture payment for invoice #${String(input.invoiceid)} using the client's stored ` +
     `payment method. This will attempt to charge the client.`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsCapturePaymentResult>("CapturePayment", {
@@ -401,7 +400,7 @@ defineTool({
       // cvv is never included here; redactDeep in the registry is defense
       // in depth on top of the fact that we simply never put it in `data`.
       data: { transactionId: raw.transactionId, amount: raw.amount, result: raw.result },
-      summary: `Capture attempted for invoice #${input.invoiceid}.`,
+      summary: `Capture attempted for invoice #${String(input.invoiceid)}.`,
     };
   },
 });
@@ -422,7 +421,7 @@ defineTool({
   buildConfirmationPreview: (input) =>
     `${input.type === "remove" ? "Remove" : "Add"} ${input.amount} credit ${
       input.type === "remove" ? "from" : "to"
-    } client #${input.clientid}: "${input.description}".`,
+    } client #${String(input.clientid)}: "${input.description}".`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsAddCreditResult>("AddCredit", {
       clientid: input.clientid,
@@ -434,7 +433,7 @@ defineTool({
     });
     return {
       data: raw,
-      summary: `${input.type === "remove" ? "Removed" : "Added"} credit for client #${input.clientid}.`,
+      summary: `${input.type === "remove" ? "Removed" : "Added"} credit for client #${String(input.clientid)}.`,
     };
   },
 });
@@ -458,7 +457,7 @@ defineTool({
     const creditlog = unwrapCollection<CreditLogRaw>(raw, "creditlog");
     return {
       data: { credit: raw.credit, creditlog },
-      summary: `Client #${input.clientid} credit balance: ${raw.credit ?? "0.00"}.`,
+      summary: `Client #${String(input.clientid)} credit balance: ${raw.credit ?? "0.00"}.`,
     };
   },
 });
@@ -481,10 +480,10 @@ defineTool({
       clientid: input.clientid,
       transid: input.transid,
     });
-    const transactions = unwrapCollection<TransactionRaw>(raw, "transactions") as Transaction[];
+    const transactions = unwrapCollection<TransactionRaw>(raw, "transactions");
     return {
       data: { transactions, numreturned: raw.numreturned, totalresults: raw.totalresults },
-      summary: `Found ${transactions.length} transaction(s).`,
+      summary: `Found ${String(transactions.length)} transaction(s).`,
     };
   },
 });
@@ -504,7 +503,7 @@ defineTool({
     idempotentHint: false,
   },
   buildConfirmationPreview: (input) =>
-    `Add a billable item for client #${input.clientid}: "${input.description}" (${input.amount})` +
+    `Add a billable item for client #${String(input.clientid)}: "${input.description}" (${input.amount})` +
     (input.invoiceaction ? `, invoiceaction=${input.invoiceaction}` : "") +
     ".",
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
@@ -521,7 +520,7 @@ defineTool({
     });
     return {
       data: { itemid: raw.itemid, invoiceid: raw.invoiceid },
-      summary: `Added billable item for client #${input.clientid}.`,
+      summary: `Added billable item for client #${String(input.clientid)}.`,
     };
   },
 });
@@ -549,7 +548,7 @@ defineTool({
     const paymethods = unwrapCollection<PayMethod>(raw, "paymethods");
     return {
       data: { paymethods },
-      summary: `Found ${paymethods.length} payment method(s) for client #${input.clientid}.`,
+      summary: `Found ${String(paymethods.length)} payment method(s) for client #${String(input.clientid)}.`,
     };
   },
 });
@@ -585,7 +584,7 @@ defineTool({
     const quotes = unwrapCollection<QuoteRaw>(raw, "quotes").map(normalizeQuote);
     return {
       data: { quotes, totalresults: raw.totalresults },
-      summary: `Found ${quotes.length} quote(s).`,
+      summary: `Found ${String(quotes.length)} quote(s).`,
     };
   },
 });
@@ -606,8 +605,8 @@ defineTool({
   },
   buildConfirmationPreview: (input) =>
     `Create a "${input.stage}" quote "${input.subject}" for ` +
-    (input.userid ? `client #${input.userid}` : `prospect ${input.prospect?.email ?? "(unknown)"}`) +
-    ` with ${input.lineitems.length} line item(s), valid until ${input.validuntil}.`,
+    (input.userid ? `client #${String(input.userid)}` : `prospect ${input.prospect?.email ?? "(unknown)"}`) +
+    ` with ${String(input.lineitems.length)} line item(s), valid until ${input.validuntil}.`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsCreateQuoteResult>("CreateQuote", {
       userid: input.userid,
@@ -628,7 +627,7 @@ defineTool({
     });
     return {
       data: { quoteid: raw.quoteid },
-      summary: `Created quote #${raw.quoteid}: "${input.subject}".`,
+      summary: `Created quote #${String(raw.quoteid)}: "${input.subject}".`,
     };
   },
 });
@@ -647,7 +646,7 @@ defineTool({
     idempotentHint: true,
   },
   buildConfirmationPreview: (input) =>
-    `Update quote #${input.quoteid}` + (input.stage ? ` (stage -> ${input.stage})` : "") + ".",
+    `Update quote #${String(input.quoteid)}` + (input.stage ? ` (stage -> ${input.stage})` : "") + ".",
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsUpdateQuoteResult>("UpdateQuote", {
       quoteid: input.quoteid,
@@ -666,7 +665,7 @@ defineTool({
     });
     return {
       data: raw,
-      summary: `Updated quote #${input.quoteid}.`,
+      summary: `Updated quote #${String(input.quoteid)}.`,
     };
   },
 });
@@ -684,14 +683,14 @@ defineTool({
     destructiveHint: false,
     idempotentHint: false,
   },
-  buildConfirmationPreview: (input) => `Email quote #${input.quoteid} to its client/prospect.`,
+  buildConfirmationPreview: (input) => `Email quote #${String(input.quoteid)} to its client/prospect.`,
   handler: async (input, ctx): Promise<ToolHandlerResult> => {
     const raw = await ctx.whmcs.call<WhmcsSendQuoteResult>("SendQuote", {
       quoteid: input.quoteid,
     });
     return {
       data: raw,
-      summary: `Sent quote #${input.quoteid}.`,
+      summary: `Sent quote #${String(input.quoteid)}.`,
     };
   },
 });

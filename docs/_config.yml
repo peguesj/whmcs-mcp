@@ -1,4 +1,4 @@
-title: "@peguesj/whmcs-mcp"
+title: "whmcs-bridge-mcp"
 description: "MCP server for the WHMCS External API — read-only by default, confirmation-gated billing mutations, PII/secret redaction, and runtime version detection."
 theme: null
 plugins: []

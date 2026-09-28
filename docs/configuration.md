@@ -1,6 +1,6 @@
 # Configuration
 
-This page covers everything needed to stand up `@peguesj/whmcs-mcp` against a real WHMCS
+This page covers everything needed to stand up `whmcs-bridge-mcp` against a real WHMCS
 instance: environment variables, the WHMCS API Role/Credential setup, IP allowlisting vs.
 `accesskey`, the mode/domain matrix that controls which tools are advertised, and copy-paste
 install snippets for Claude Desktop, Claude Code, and Cursor.
@@ -193,7 +193,7 @@ file — never commit them.
   "mcpServers": {
     "whmcs": {
       "command": "npx",
-      "args": ["-y", "@peguesj/whmcs-mcp"],
+      "args": ["-y", "whmcs-bridge-mcp"],
       "env": {
         "WHMCS_API_URL": "https://billing.example.com/includes/api.php",
         "WHMCS_API_IDENTIFIER": "your-api-identifier",
@@ -212,7 +212,7 @@ file — never commit them.
   "mcpServers": {
     "whmcs": {
       "command": "npx",
-      "args": ["-y", "@peguesj/whmcs-mcp"],
+      "args": ["-y", "whmcs-bridge-mcp"],
       "env": {
         "WHMCS_API_URL": "${WHMCS_API_URL}",
         "WHMCS_API_IDENTIFIER": "${WHMCS_API_IDENTIFIER}",
@@ -235,7 +235,7 @@ a file that might be checked into a repo.
   "mcpServers": {
     "whmcs": {
       "command": "npx",
-      "args": ["-y", "@peguesj/whmcs-mcp"],
+      "args": ["-y", "whmcs-bridge-mcp"],
       "env": {
         "WHMCS_API_URL": "https://billing.example.com/includes/api.php",
         "WHMCS_API_IDENTIFIER": "your-api-identifier",

@@ -1,6 +1,6 @@
 # Security Policy
 
-`@peguesj/whmcs-mcp` gives a Model Context Protocol client (Claude, another
+`whmcs-bridge-mcp` gives a Model Context Protocol client (Claude, another
 LLM agent, or any MCP host) programmatic access to a WHMCS instance's
 External API. WHMCS is a billing system of record: client PII, payment
 instruments, support communications, and invoicing all live behind the

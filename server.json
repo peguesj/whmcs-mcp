@@ -12,7 +12,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "@peguesj/whmcs-mcp",
+      "identifier": "whmcs-bridge-mcp",
       "version": "0.1.0",
       "runtimeHint": "node",
       "transport": {

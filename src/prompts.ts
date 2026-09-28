@@ -115,7 +115,7 @@ function registerTriageTicketPrompt(server: McpServer): void {
 
       const identifierLine = ticketId
         ? `ticketid: ${ticketId}`
-        : `ticketnum: ${ticketNumber}`;
+        : `ticketnum: ${String(ticketNumber)}`;
       const focusLine = focus ? `\n\nFocus area requested: ${focus}` : "";
 
       return {
@@ -211,7 +211,7 @@ function registerClient360Prompt(server: McpServer): void {
         };
       }
 
-      const identifierLine = clientId ? `clientid: ${clientId}` : `email: ${email}`;
+      const identifierLine = clientId ? `clientid: ${clientId}` : `email: ${String(email)}`;
 
       return {
         messages: [

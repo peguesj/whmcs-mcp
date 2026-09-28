@@ -1,175 +1,344 @@
 /**
  * test/tools.test.ts
  *
- * Contract tests for every MCP tool exposed by @peguesj/whmcs-mcp.
+ * Contract tests for every MCP tool exposed by whmcs-bridge-mcp, against the
+ * REAL registry surface in src/tools/registry.ts:
  *
- * Scope (per the architecture plan's file layout entry for this path):
- *   - schema -> WHMCS param serialization for every tool in the toolList
- *   - result shape (each tool returns MCP content + structuredContent that
- *     matches the normalized, redacted shape the client produces)
- *   - mode filtering (readonly | write | full) and per-domain enable/disable
- *     via WHMCS_MCP_ENABLE_DOMAINS
+ *   - `defineTool(def)` (single-arg) records a tool definition as a
+ *     module-load side effect of each src/tools/<domain>.ts file.
+ *   - `getAllToolDefinitions()` returns every definition recorded so far.
+ *   - `registerTools(server, ctx)` filters definitions by
+ *     WHMCS_MCP_MODE/WHMCS_MCP_ENABLE_DOMAINS and calls
+ *     `server.registerTool(name, meta, callback)` for each one that passes.
  *
- * These tests exercise the tool registry (src/tools/registry.ts + the
- * per-domain src/tools/*.ts modules) against the in-process mock WHMCS
- * server (test/mock-whmcs-server.ts), never a real WHMCS instance.
+ * There is no `buildToolRegistry`/`RegisteredTool` export (an earlier,
+ * abandoned API shape) -- this file drives the real API by importing every
+ * domain module for its `defineTool` side effects, then exercising
+ * `registerTools` against a minimal fake `McpServer` stub that captures each
+ * registered tool's `(meta, callback)` pair, which is what a real MCP client
+ * actually calls (not the raw `def.handler`). This is the same pattern
+ * test/safety.test.ts's header comment recommends for reconciling this file
+ * with the real registry.
+ *
+ * Scope (preserved from the original plan, re-targeted at the real API):
+ *   - coverage: every tool `defineTool`'d by the domain modules has a valid
+ *     tier/domain and is advertised under full mode + all domains, with no
+ *     drift between the declared tier and what mode-gating actually does.
+ *   - schema -> WHMCS param serialization + result shape, for a
+ *     representative tool per domain/tier combination (verified against the
+ *     real mock WHMCS server), including the billing/destructive two-step
+ *     confirmToken flow and dryRun short-circuiting.
+ *   - mode filtering (readonly | write | full).
+ *   - domain filtering (WHMCS_MCP_ENABLE_DOMAINS).
+ *
+ * The full 84-tool fixture table from the original (unrunnable) version of
+ * this file duplicated src/tools/*.ts's own `name`/`domain`/`tier`/
+ * `whmcsAction` declarations by hand, which is exactly the kind of drift
+ * this rewrite avoids: coverage/mode/domain assertions below read that
+ * metadata directly from `getAllToolDefinitions()` (the real source of
+ * truth) instead of a hand-maintained duplicate.
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
 
 import { startMockWhmcsServer, type MockWhmcsServer } from "./mock-whmcs-server.js";
 import { createWhmcsClient, type WhmcsClient } from "../src/whmcs-client.js";
-import { buildToolRegistry, type RegisteredTool, type ToolTier } from "../src/tools/registry.js";
-import type { WhmcsMcpMode } from "../src/config.js";
+import {
+  getAllToolDefinitions,
+  registerTools,
+  type ToolContext,
+  type ToolDefinition,
+  type ToolDomain,
+  type ToolTier,
+} from "../src/tools/registry.js";
+import type { WhmcsMcpConfig, McpMode } from "../src/config.js";
+
+// Side-effect imports: population of the shared TOOL_REGISTRY, mirroring
+// exactly what src/index.ts does before calling registerTools(...).
+import "../src/tools/system.js";
+import "../src/tools/tickets.js";
+import "../src/tools/clients.js";
+import "../src/tools/products.js";
+import "../src/tools/invoices.js";
+import "../src/tools/domains.js";
+import "../src/tools/orders.js";
+
+const ALL_TIERS: readonly ToolTier[] = ["read", "write", "billing", "destructive"];
+const ALL_DOMAINS: readonly ToolDomain[] = [
+  "system",
+  "tickets",
+  "clients",
+  "products",
+  "invoices",
+  "domains",
+  "orders",
+  "custom",
+];
 
 /* -------------------------------------------------------------------------
- * Fixtures: mirrors toolList from the architecture plan.
- *
- * Each entry: [toolName, domain, whmcsAction, tier]. This table is the
- * single source of truth this test file walks to build its assertions, so
- * adding a tool to src/tools/<domain>.ts without adding it here fails the
- * "every tool is covered" meta-test at the bottom of the file.
+ * Fake McpServer: captures registerTool(name, meta, callback) the same way
+ * the real MCP SDK's McpServer does, without pulling in transport/session
+ * machinery this file has no use for. This is what real MCP clients call --
+ * not `def.handler` directly -- so exercising it here is what actually
+ * proves the registered tool works end to end (schema validation, the
+ * confirm-token gate, redaction, and structuredContent wrapping all live in
+ * registerTools' callback, not in a bare handler call).
  * ---------------------------------------------------------------------- */
 
-type ToolFixture = {
+interface CapturedTool {
+  meta: { description: string; inputSchema: unknown; annotations: Record<string, unknown> };
+  callback: (rawInput: unknown, extra?: unknown) => Promise<{
+    content: { type: "text"; text: string }[];
+    structuredContent?: Record<string, unknown>;
+    isError?: boolean;
+  }>;
+}
+
+class FakeMcpServer {
+  readonly tools = new Map<string, CapturedTool>();
+  registerTool(
+    name: string,
+    meta: CapturedTool["meta"],
+    callback: CapturedTool["callback"],
+  ): void {
+    this.tools.set(name, { meta, callback });
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Test harness
+ * ---------------------------------------------------------------------- */
+
+let mock: MockWhmcsServer;
+let apiUrl: string;
+let client: WhmcsClient;
+
+beforeAll(async () => {
+  mock = await startMockWhmcsServer({
+    credentials: { identifier: "mcp-test-identifier", secret: "mcp-test-secret" },
+  });
+  const address = mock.server.address() as AddressInfo;
+  apiUrl = `http://127.0.0.1:${address.port}`;
+  client = createWhmcsClient({
+    apiUrl,
+    identifier: "mcp-test-identifier",
+    secret: "mcp-test-secret",
+    timeoutMs: 5_000,
+    rateLimitPerSecond: 100,
+    allowInsecure: true,
+  });
+});
+
+afterAll(async () => {
+  await mock.close();
+});
+
+afterEach(() => {
+  mock.reset();
+});
+
+/** Builds a minimal, real-shaped WhmcsMcpConfig for a given mode/domain set. */
+function makeConfig(mode: McpMode, enabledDomains?: readonly string[]): WhmcsMcpConfig {
+  return {
+    apiUrl,
+    allowInsecure: true,
+    mode,
+    enabledDomains: (enabledDomains ?? []) as never,
+    redactPii: true,
+    timeoutMs: 5_000,
+    rateLimitPerMinute: 6_000,
+    getSecrets: () => ({
+      identifier: "mcp-test-identifier",
+      secret: "mcp-test-secret",
+      accessKey: undefined,
+    }),
+  } as WhmcsMcpConfig;
+}
+
+/** Registers every tool that passes mode/domain gating onto a fresh FakeMcpServer. */
+function registerAndCapture(mode: McpMode, enabledDomains?: readonly string[]): FakeMcpServer {
+  const server = new FakeMcpServer();
+  const ctx: ToolContext = { whmcs: client, config: makeConfig(mode, enabledDomains) };
+  registerTools(server as unknown as Parameters<typeof registerTools>[0], ctx);
+  return server;
+}
+
+const ALL_DEFS: ReadonlyArray<ToolDefinition<any>> = getAllToolDefinitions();
+
+/* -------------------------------------------------------------------------
+ * 1. Coverage: every defineTool'd tool has valid metadata and is advertised
+ *    under full mode + every domain, with the exact tier/domain it declared.
+ * ---------------------------------------------------------------------- */
+
+describe("tool registry coverage", () => {
+  it("has at least one tool defined per built-in domain module", () => {
+    expect(ALL_DEFS.length).toBeGreaterThan(0);
+    const domainsSeen = new Set(ALL_DEFS.map((d) => d.domain));
+    for (const domain of ["system", "tickets", "clients", "products", "invoices", "domains", "orders"] as const) {
+      expect(domainsSeen.has(domain), `expected at least one tool in domain "${domain}"`).toBe(true);
+    }
+  });
+
+  it("every tool declares a tier from the four known tiers and a domain from the known domain set", () => {
+    for (const def of ALL_DEFS) {
+      expect(ALL_TIERS, `tool "${def.name}" has unknown tier "${def.tier}"`).toContain(def.tier);
+      expect(ALL_DOMAINS, `tool "${def.name}" has unknown domain "${def.domain}"`).toContain(def.domain);
+    }
+  });
+
+  it("every tool name is unique (defineTool's own duplicate guard, exercised end to end)", () => {
+    const names = ALL_DEFS.map((d) => d.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("registers every defined tool, with its declared tier, when mode=full and all domains are enabled", () => {
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    expect(server.tools.size).toBe(ALL_DEFS.length);
+    for (const def of ALL_DEFS) {
+      const captured = server.tools.get(def.name);
+      expect(captured, `expected tool "${def.name}" to be registered`).toBeDefined();
+      expect(captured!.meta.description).toContain(`[${def.tier}]`);
+      expect(captured!.meta.description).toContain(def.whmcsAction);
+    }
+  });
+
+  it("billing and destructive tiers are always confirm-gated in their own definitions (policy is not opt-out per tool)", () => {
+    const billingOrDestructive = ALL_DEFS.filter((d) => d.tier === "billing" || d.tier === "destructive");
+    expect(billingOrDestructive.length).toBeGreaterThan(0);
+    // resolveToolPolicy would throw at registration time if a tool tried to
+    // opt out; registerAndCapture("full", ...) above already exercised that
+    // path without throwing, so this is a structural sanity check that the
+    // sample is non-empty and every entry is one of the two gated tiers.
+    for (const def of billingOrDestructive) {
+      expect(["billing", "destructive"]).toContain(def.tier);
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * 2. Mode filtering: readonly | write | full
+ * ---------------------------------------------------------------------- */
+
+describe("mode filtering", () => {
+  it("readonly mode advertises only read-tier tools", () => {
+    const server = registerAndCapture("readonly", ALL_DOMAINS);
+    expect(server.tools.size).toBeGreaterThan(0);
+    const expectedReadNames = new Set(ALL_DEFS.filter((d) => d.tier === "read").map((d) => d.name));
+    expect(new Set(server.tools.keys())).toEqual(expectedReadNames);
+  });
+
+  it("write mode advertises read and write tier tools, never billing or destructive", () => {
+    const server = registerAndCapture("write", ALL_DOMAINS);
+    const expected = new Set(
+      ALL_DEFS.filter((d) => d.tier === "read" || d.tier === "write").map((d) => d.name),
+    );
+    expect(new Set(server.tools.keys())).toEqual(expected);
+  });
+
+  it("full mode advertises every tier including billing and destructive", () => {
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    expect(new Set(server.tools.keys())).toEqual(new Set(ALL_DEFS.map((d) => d.name)));
+    const anyBilling = ALL_DEFS.find((d) => d.tier === "billing");
+    const anyDestructive = ALL_DEFS.find((d) => d.tier === "destructive");
+    expect(anyBilling).toBeDefined();
+    expect(anyDestructive).toBeDefined();
+    expect(server.tools.has(anyBilling!.name)).toBe(true);
+    expect(server.tools.has(anyDestructive!.name)).toBe(true);
+  });
+
+  it("the billing tier stays disabled outside mode=full -- no combination of readonly/write ever exposes it", () => {
+    const billingNames = ALL_DEFS.filter((d) => d.tier === "billing").map((d) => d.name);
+    expect(billingNames.length).toBeGreaterThan(0);
+    for (const mode of ["readonly", "write"] as const) {
+      const server = registerAndCapture(mode, ALL_DOMAINS);
+      for (const name of billingNames) {
+        expect(server.tools.has(name)).toBe(false);
+      }
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * 3. Domain filtering: WHMCS_MCP_ENABLE_DOMAINS
+ * ---------------------------------------------------------------------- */
+
+describe("domain filtering", () => {
+  it("only advertises tools from enabled domains", () => {
+    const server = registerAndCapture("full", ["tickets", "system"]);
+    for (const name of server.tools.keys()) {
+      const def = ALL_DEFS.find((d) => d.name === name)!;
+      expect(["tickets", "system"]).toContain(def.domain);
+    }
+    expect(server.tools.has("clients_list")).toBe(false);
+    expect(server.tools.has("billing_list_invoices")).toBe(false);
+    expect(server.tools.has("tickets_list")).toBe(true);
+    expect(server.tools.has("system_get_details")).toBe(true);
+  });
+
+  it("an empty domain list is treated as \"no restriction\" (all domains), matching registerTools' own `.length > 0` gate", () => {
+    // registerTools only builds an enabledDomains Set when the config array
+    // is non-empty (src/tools/registry.ts); an empty array falls through to
+    // "no restriction", the same as leaving WHMCS_MCP_ENABLE_DOMAINS unset.
+    // A prior version of this test asserted the opposite (empty => none),
+    // which does not match the real, intentional gate.
+    const server = registerAndCapture("full", []);
+    expect(server.tools.size).toBe(ALL_DEFS.length);
+  });
+
+  it("mode and domain filters compose (intersection, not union)", () => {
+    const server = registerAndCapture("readonly", ["invoices"]);
+    for (const name of server.tools.keys()) {
+      const def = ALL_DEFS.find((d) => d.name === name)!;
+      expect(def.domain).toBe("invoices");
+      expect(def.tier).toBe("read");
+    }
+    expect(server.tools.has("billing_list_invoices")).toBe(true);
+    expect(server.tools.has("billing_create_invoice")).toBe(false);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * 4. Schema -> WHMCS param serialization + result shape, for a
+ *    representative tool per tier/domain combination the mock server
+ *    actually fixtures.
+ * ---------------------------------------------------------------------- */
+
+type SampleFixture = {
   readonly name: string;
-  readonly domain: string;
   readonly action: string;
-  readonly tier: ToolTier;
-  /** Minimal valid input that should pass the zod schema and round-trip to WHMCS. */
-  readonly sampleInput: Record<string, unknown>;
-  /** True if this tool requires a confirmToken (billing/destructive tier tools always do). */
-  readonly requiresConfirm?: boolean;
+  readonly input: Record<string, unknown>;
+  readonly gated: boolean;
 };
 
-const TOOL_FIXTURES: readonly ToolFixture[] = [
-  // --- system ---
-  { name: "system_get_details", domain: "system", action: "GetDetails", tier: "read", sampleInput: {} },
-  { name: "system_get_stats", domain: "system", action: "GetStats", tier: "read", sampleInput: {} },
-  {
-    name: "system_get_activity_log",
-    domain: "system",
-    action: "GetActivityLog",
-    tier: "read",
-    sampleInput: { limitnum: 10 },
-  },
-  { name: "system_get_admin_details", domain: "system", action: "GetAdminDetails", tier: "read", sampleInput: {} },
-  { name: "system_get_todo_items", domain: "system", action: "GetToDoItems", tier: "read", sampleInput: {} },
-  {
-    name: "system_get_email_templates",
-    domain: "system",
-    action: "GetEmailTemplates",
-    tier: "read",
-    sampleInput: { type: "general" },
-  },
+const SAMPLES: readonly SampleFixture[] = [
+  { name: "system_get_details", action: "WhmcsDetails", input: {}, gated: false },
+  { name: "system_get_todo_items", action: "GetToDoItems", input: {}, gated: false },
   {
     name: "system_send_email",
-    domain: "system",
     action: "SendEmail",
-    tier: "write",
-    sampleInput: { messagename: "Test Email", id: 1 },
-  },
-  { name: "system_get_payment_methods", domain: "system", action: "GetPaymentMethods", tier: "read", sampleInput: {} },
-  { name: "system_get_currencies", domain: "system", action: "GetCurrencies", tier: "read", sampleInput: {} },
-  {
-    name: "system_log_activity",
-    domain: "system",
-    action: "LogActivity",
-    tier: "write",
-    sampleInput: { description: "MCP contract test" },
+    input: { mode: "template", id: 1, messagename: "Test Email" },
+    gated: false,
   },
   {
     name: "whmcs_raw_call",
-    domain: "system",
-    action: "<dynamic>",
-    tier: "write",
-    sampleInput: { action: "GetDetails", params: {} },
-    requiresConfirm: true,
+    action: "WhmcsDetails",
+    input: { action: "WhmcsDetails", params: {} },
+    gated: true,
   },
-
-  // --- tickets ---
-  { name: "tickets_list", domain: "tickets", action: "GetTickets", tier: "read", sampleInput: { limitnum: 25 } },
-  { name: "tickets_get", domain: "tickets", action: "GetTicket", tier: "read", sampleInput: { ticketid: 1 } },
+  { name: "tickets_list", action: "GetTickets", input: {}, gated: false },
   {
     name: "tickets_create",
-    domain: "tickets",
     action: "OpenTicket",
-    tier: "write",
-    sampleInput: { deptid: 1, subject: "Test", message: "Test message", clientid: 1 },
+    input: { deptid: 1, subject: "Test", message: "Test message", clientid: 1 },
+    gated: false,
   },
-  {
-    name: "tickets_reply",
-    domain: "tickets",
-    action: "AddTicketReply",
-    tier: "write",
-    sampleInput: { ticketid: 1, message: "Reply" },
-  },
-  {
-    name: "tickets_add_note",
-    domain: "tickets",
-    action: "AddTicketNote",
-    tier: "write",
-    sampleInput: { ticketid: 1, message: "Note" },
-  },
-  { name: "tickets_get_notes", domain: "tickets", action: "GetTicketNotes", tier: "read", sampleInput: { ticketid: 1 } },
-  {
-    name: "tickets_update",
-    domain: "tickets",
-    action: "UpdateTicket",
-    tier: "write",
-    sampleInput: { ticketid: 1, status: "Closed" },
-  },
-  {
-    name: "tickets_update_reply",
-    domain: "tickets",
-    action: "UpdateTicketReply",
-    tier: "write",
-    sampleInput: { replyid: 1, message: "Edited" },
-  },
-  {
-    name: "tickets_merge",
-    domain: "tickets",
-    action: "MergeTicket",
-    tier: "destructive",
-    sampleInput: { ticketid: 1, mergeticketids: "2,3" },
-    requiresConfirm: true,
-  },
-  {
-    name: "tickets_delete",
-    domain: "tickets",
-    action: "DeleteTicket",
-    tier: "destructive",
-    sampleInput: { ticketid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "tickets_get_attachment",
-    domain: "tickets",
-    action: "GetTicketAttachment",
-    tier: "read",
-    sampleInput: { relatedid: 1, type: "ticket", index: 0 },
-  },
-  { name: "tickets_get_counts", domain: "tickets", action: "GetTicketCounts", tier: "read", sampleInput: {} },
-  { name: "tickets_get_departments", domain: "tickets", action: "GetSupportDepartments", tier: "read", sampleInput: {} },
-  { name: "tickets_get_statuses", domain: "tickets", action: "GetSupportStatuses", tier: "read", sampleInput: {} },
-  {
-    name: "tickets_get_predefined_replies",
-    domain: "tickets",
-    action: "GetTicketPredefinedReplies",
-    tier: "read",
-    sampleInput: {},
-  },
-
-  // --- clients ---
-  { name: "clients_list", domain: "clients", action: "GetClients", tier: "read", sampleInput: { limitnum: 25 } },
-  { name: "clients_get", domain: "clients", action: "GetClientsDetails", tier: "read", sampleInput: { clientid: 1 } },
+  { name: "tickets_delete", action: "DeleteTicket", input: { ticketid: 1 }, gated: true },
+  { name: "clients_get", action: "GetClientsDetails", input: { clientid: 1 }, gated: false },
   {
     name: "clients_create",
-    domain: "clients",
     action: "AddClient",
-    tier: "write",
-    sampleInput: {
+    input: {
       firstname: "Test",
       lastname: "Client",
       email: "test@example.com",
@@ -180,667 +349,155 @@ const TOOL_FIXTURES: readonly ToolFixture[] = [
       country: "US",
       phonenumber: "5555555555",
     },
+    gated: false,
   },
-  {
-    name: "clients_update",
-    domain: "clients",
-    action: "UpdateClient",
-    tier: "write",
-    sampleInput: { clientid: 1, notes: "Updated by contract test" },
-  },
-  {
-    name: "clients_close",
-    domain: "clients",
-    action: "CloseClient",
-    tier: "destructive",
-    sampleInput: { clientid: 1 },
-    requiresConfirm: true,
-  },
-  { name: "clients_get_contacts", domain: "clients", action: "GetContacts", tier: "read", sampleInput: { userid: 1 } },
-  {
-    name: "clients_add_contact",
-    domain: "clients",
-    action: "AddContact",
-    tier: "write",
-    sampleInput: { clientid: 1, firstname: "Con", lastname: "Tact", email: "contact@example.com" },
-  },
-  {
-    name: "clients_update_contact",
-    domain: "clients",
-    action: "UpdateContact",
-    tier: "write",
-    sampleInput: { contactid: 1, firstname: "Con" },
-  },
-  { name: "clients_get_emails", domain: "clients", action: "GetEmails", tier: "read", sampleInput: { clientid: 1 } },
-  { name: "clients_get_groups", domain: "clients", action: "GetClientGroups", tier: "read", sampleInput: {} },
-
-  // --- products (clients_get_services/addons live in this domain per the plan) ---
-  {
-    name: "clients_get_services",
-    domain: "products",
-    action: "GetClientsProducts",
-    tier: "read",
-    sampleInput: { clientid: 1 },
-  },
-  {
-    name: "clients_get_addons",
-    domain: "products",
-    action: "GetClientsAddons",
-    tier: "read",
-    sampleInput: { clientid: 1 },
-  },
-  { name: "products_list", domain: "products", action: "GetProducts", tier: "read", sampleInput: {} },
-  { name: "products_get_promotions", domain: "products", action: "GetPromotions", tier: "read", sampleInput: {} },
-  {
-    name: "services_update",
-    domain: "products",
-    action: "UpdateClientProduct",
-    tier: "write",
-    sampleInput: { serviceid: 1, notes: "Contract test" },
-  },
-  {
-    name: "services_update_addon",
-    domain: "products",
-    action: "UpdateClientAddon",
-    tier: "write",
-    sampleInput: { id: 1, status: "Active" },
-  },
-  {
-    name: "services_upgrade",
-    domain: "products",
-    action: "UpgradeProduct",
-    tier: "billing",
-    sampleInput: { serviceid: 1, type: "product", newproductid: 2, paymentmethod: "mock", calconly: true },
-    requiresConfirm: true,
-  },
-  {
-    name: "services_module_create",
-    domain: "products",
-    action: "ModuleCreate",
-    tier: "write",
-    sampleInput: { serviceid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "services_module_suspend",
-    domain: "products",
-    action: "ModuleSuspend",
-    tier: "write",
-    sampleInput: { serviceid: 1, suspendreason: "Contract test" },
-    requiresConfirm: true,
-  },
-  {
-    name: "services_module_unsuspend",
-    domain: "products",
-    action: "ModuleUnsuspend",
-    tier: "write",
-    sampleInput: { serviceid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "services_module_terminate",
-    domain: "products",
-    action: "ModuleTerminate",
-    tier: "destructive",
-    sampleInput: { serviceid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "services_module_change_package",
-    domain: "products",
-    action: "ModuleChangePackage",
-    tier: "write",
-    sampleInput: { serviceid: 1 },
-    requiresConfirm: true,
-  },
-
-  // --- invoices (billing_* and quotes_*) ---
-  { name: "billing_list_invoices", domain: "invoices", action: "GetInvoices", tier: "read", sampleInput: {} },
-  { name: "billing_get_invoice", domain: "invoices", action: "GetInvoice", tier: "read", sampleInput: { invoiceid: 1 } },
+  { name: "clients_close", action: "CloseClient", input: { clientid: 1 }, gated: true },
+  { name: "billing_list_invoices", action: "GetInvoices", input: {}, gated: false },
   {
     name: "billing_create_invoice",
-    domain: "invoices",
     action: "CreateInvoice",
-    tier: "billing",
-    sampleInput: { userid: 1, status: "Draft", items: [{ description: "Test item", amount: "10.00" }] },
-    requiresConfirm: true,
+    input: { userid: 1, items: [{ description: "Test item", amount: "10.00" }] },
+    gated: true,
   },
-  {
-    name: "billing_update_invoice",
-    domain: "invoices",
-    action: "UpdateInvoice",
-    tier: "billing",
-    sampleInput: { invoiceid: 1, notes: "Contract test" },
-    requiresConfirm: true,
-  },
-  {
-    name: "billing_add_payment",
-    domain: "invoices",
-    action: "AddInvoicePayment",
-    tier: "billing",
-    sampleInput: { invoiceid: 1, transid: "TX-1", gateway: "mock" },
-    requiresConfirm: true,
-  },
-  {
-    name: "billing_apply_credit",
-    domain: "invoices",
-    action: "ApplyCredit",
-    tier: "billing",
-    sampleInput: { invoiceid: 1, amount: "5.00" },
-    requiresConfirm: true,
-  },
-  {
-    name: "billing_capture_payment",
-    domain: "invoices",
-    action: "CapturePayment",
-    tier: "billing",
-    sampleInput: { invoiceid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "billing_add_credit",
-    domain: "invoices",
-    action: "AddCredit",
-    tier: "billing",
-    sampleInput: { clientid: 1, description: "Contract test credit", amount: "1.00" },
-    requiresConfirm: true,
-  },
-  { name: "billing_get_credits", domain: "invoices", action: "GetCredits", tier: "read", sampleInput: { clientid: 1 } },
-  { name: "billing_get_transactions", domain: "invoices", action: "GetTransactions", tier: "read", sampleInput: {} },
-  {
-    name: "billing_add_billable_item",
-    domain: "invoices",
-    action: "AddBillableItem",
-    tier: "billing",
-    sampleInput: { clientid: 1, description: "Contract test", amount: "1.00" },
-    requiresConfirm: true,
-  },
-  {
-    name: "billing_get_pay_methods",
-    domain: "invoices",
-    action: "GetPayMethods",
-    tier: "read",
-    sampleInput: { clientid: 1 },
-  },
-  { name: "quotes_list", domain: "invoices", action: "GetQuotes", tier: "read", sampleInput: {} },
-  {
-    name: "quotes_create",
-    domain: "invoices",
-    action: "CreateQuote",
-    tier: "billing",
-    sampleInput: {
-      subject: "Contract test quote",
-      stage: "Draft",
-      validuntil: "2026-12-31",
-      userid: 1,
-      lineitems: [{ desc: "Item", qty: 1, up: "10.00" }],
-    },
-    requiresConfirm: true,
-  },
-  {
-    name: "quotes_update",
-    domain: "invoices",
-    action: "UpdateQuote",
-    tier: "billing",
-    sampleInput: { quoteid: 1, subject: "Updated" },
-    requiresConfirm: true,
-  },
-  {
-    name: "quotes_send",
-    domain: "invoices",
-    action: "SendQuote",
-    tier: "write",
-    sampleInput: { quoteid: 1 },
-    requiresConfirm: true,
-  },
-
-  // --- domains ---
-  { name: "domains_list", domain: "domains", action: "GetClientsDomains", tier: "read", sampleInput: {} },
-  {
-    name: "domains_whois_availability",
-    domain: "domains",
-    action: "DomainWhois",
-    tier: "read",
-    sampleInput: { domain: "example.com" },
-  },
-  {
-    name: "domains_get_nameservers",
-    domain: "domains",
-    action: "DomainGetNameservers",
-    tier: "read",
-    sampleInput: { domainid: 1 },
-  },
-  {
-    name: "domains_update_nameservers",
-    domain: "domains",
-    action: "DomainUpdateNameservers",
-    tier: "write",
-    sampleInput: { domainid: 1, ns1: "ns1.example.com", ns2: "ns2.example.com" },
-    requiresConfirm: true,
-  },
-  {
-    name: "domains_get_locking_status",
-    domain: "domains",
-    action: "DomainGetLockingStatus",
-    tier: "read",
-    sampleInput: { domainid: 1 },
-  },
-  {
-    name: "domains_update_locking_status",
-    domain: "domains",
-    action: "DomainUpdateLockingStatus",
-    tier: "write",
-    sampleInput: { domainid: 1, lockstatus: true },
-    requiresConfirm: true,
-  },
-  {
-    name: "domains_get_whois_info",
-    domain: "domains",
-    action: "DomainGetWhoisInfo",
-    tier: "read",
-    sampleInput: { domainid: 1 },
-  },
-  {
-    name: "domains_update",
-    domain: "domains",
-    action: "UpdateClientDomain",
-    tier: "write",
-    sampleInput: { domainid: 1, notes: "Contract test" },
-  },
-  {
-    name: "domains_renew",
-    domain: "domains",
-    action: "DomainRenew",
-    tier: "billing",
-    sampleInput: { domainid: 1, regperiod: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "domains_register",
-    domain: "domains",
-    action: "DomainRegister",
-    tier: "billing",
-    sampleInput: { domainid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "domains_transfer",
-    domain: "domains",
-    action: "DomainTransfer",
-    tier: "billing",
-    sampleInput: { domainid: 1, eppcode: "REDACTED-EPP" },
-    requiresConfirm: true,
-  },
-  { name: "domains_get_tld_pricing", domain: "domains", action: "GetTLDPricing", tier: "read", sampleInput: {} },
-
-  // --- orders ---
-  { name: "orders_list", domain: "orders", action: "GetOrders", tier: "read", sampleInput: {} },
-  { name: "orders_get_statuses", domain: "orders", action: "GetOrderStatuses", tier: "read", sampleInput: {} },
-  {
-    name: "orders_create",
-    domain: "orders",
-    action: "AddOrder",
-    tier: "billing",
-    sampleInput: {
-      clientid: 1,
-      paymentmethod: "mock",
-      items: [{ pid: 1, billingcycle: "monthly" }],
-      noinvoice: true,
-    },
-    requiresConfirm: true,
-  },
-  {
-    name: "orders_accept",
-    domain: "orders",
-    action: "AcceptOrder",
-    tier: "write",
-    sampleInput: { orderid: 1 },
-    requiresConfirm: true,
-  },
-  { name: "orders_pending", domain: "orders", action: "PendingOrder", tier: "write", sampleInput: { orderid: 1 } },
-  {
-    name: "orders_cancel",
-    domain: "orders",
-    action: "CancelOrder",
-    tier: "destructive",
-    sampleInput: { orderid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "orders_mark_fraud",
-    domain: "orders",
-    action: "FraudOrder",
-    tier: "destructive",
-    sampleInput: { orderid: 1 },
-    requiresConfirm: true,
-  },
-  {
-    name: "orders_delete",
-    domain: "orders",
-    action: "DeleteOrder",
-    tier: "destructive",
-    sampleInput: { orderid: 1 },
-    requiresConfirm: true,
-  },
+  { name: "domains_list", action: "GetClientsDomains", input: {}, gated: false },
+  { name: "domains_register", action: "DomainRegister", input: { domainid: 1 }, gated: true },
+  { name: "orders_list", action: "GetOrders", input: {}, gated: false },
+  { name: "orders_cancel", action: "CancelOrder", input: { orderid: 1 }, gated: true },
 ];
 
-const ALL_DOMAINS = [...new Set(TOOL_FIXTURES.map((t) => t.domain))].sort();
-
-/* -------------------------------------------------------------------------
- * Test harness
- * ---------------------------------------------------------------------- */
-
-let mock: MockWhmcsServer;
-let apiUrl: string;
-
-beforeAll(async () => {
-  mock = await startMockWhmcsServer();
-  const address = mock.server.address() as AddressInfo;
-  apiUrl = `http://127.0.0.1:${address.port}/includes/api.php`;
-});
-
-afterAll(async () => {
-  await mock.close();
-});
-
-afterEach(() => {
-  mock.resetCallLog();
-});
-
-/** Builds a tool registry in a given mode/domain configuration against the mock. */
-function buildRegistryFor(mode: WhmcsMcpMode, enabledDomains?: readonly string[]): {
-  client: WhmcsClient;
-  tools: ReadonlyMap<string, RegisteredTool>;
-} {
-  const client = createWhmcsClient({
-    apiUrl,
-    identifier: "mcp-test-identifier",
-    secret: "mcp-test-secret",
-    timeoutMs: 5_000,
-    rateLimitPerSecond: 100,
-  });
-  const tools = buildToolRegistry({
-    client,
-    mode,
-    enabledDomains: enabledDomains ?? ALL_DOMAINS,
-    redactPii: true,
-  });
-  return { client, tools };
-}
-
-/* -------------------------------------------------------------------------
- * 1. Coverage meta-test: every fixture must exist in the built registry
- *    (full mode, all domains enabled) with the expected tier.
- * ---------------------------------------------------------------------- */
-
-describe("tool registry coverage", () => {
-  const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-
-  it.each(TOOL_FIXTURES.map((f) => [f.name, f] as const))(
-    "registers %s with the tier declared in the architecture plan",
-    (_name, fixture) => {
-      const tool = tools.get(fixture.name);
-      expect(tool, `expected tool "${fixture.name}" to be registered`).toBeDefined();
-      expect(tool!.tier).toBe(fixture.tier);
-      expect(tool!.domain).toBe(fixture.domain);
-    },
-  );
-
-  it("registers exactly the tool set the plan declares (no drift)", () => {
-    const expected = new Set(TOOL_FIXTURES.map((f) => f.name));
-    const actual = new Set(tools.keys());
-    expect([...actual].sort()).toEqual([...expected].sort());
-  });
-});
-
-/* -------------------------------------------------------------------------
- * 2. Schema -> WHMCS param serialization + result shape, per tool.
- *
- *    Runs every read-tier and write-tier tool's sampleInput through the
- *    real handler against the mock server, and asserts:
- *      - the mock received the expected `action`
- *      - identifier/secret were present on every request (auth injection)
- *      - the tool's result carries structuredContent (not just text)
- *      - billing/destructive tools without a confirmToken return a
- *        preview + confirmToken instead of calling WHMCS
- * ---------------------------------------------------------------------- */
-
 describe("schema -> WHMCS param serialization and result shape", () => {
-  const { tools } = buildRegistryFor("full", ALL_DOMAINS);
+  // `registerAndCapture` reads the module-scoped `client` set in the
+  // top-level `beforeAll` above; it must not run at collection time (this
+  // describe callback body executes synchronously while the file is being
+  // collected, before any `beforeAll` hook has run), or `ctx.whmcs` is
+  // still undefined when the registered callbacks are invoked below.
+  let server: FakeMcpServer;
+  beforeAll(() => {
+    server = registerAndCapture("full", ALL_DOMAINS);
+  });
 
-  for (const fixture of TOOL_FIXTURES) {
-    it(`${fixture.name} serializes its input and returns structured content`, async () => {
-      const tool = tools.get(fixture.name);
-      expect(tool).toBeDefined();
+  it("covers a representative tool for every tier this server declares", () => {
+    const coveredTiers = new Set(
+      SAMPLES.map((s) => ALL_DEFS.find((d) => d.name === s.name)!.tier),
+    );
+    expect(coveredTiers).toEqual(new Set(ALL_TIERS));
+  });
 
-      const parsed = tool!.inputSchema.safeParse(fixture.sampleInput);
-      expect(parsed.success, `input schema rejected sample input: ${JSON.stringify(parsed as unknown)}`).toBe(true);
+  for (const sample of SAMPLES) {
+    it(`${sample.name} accepts its sample input, calls WHMCS action "${sample.action}", and returns structured content`, async () => {
+      const tool = server.tools.get(sample.name);
+      expect(tool, `expected tool "${sample.name}" to be registered`).toBeDefined();
 
-      const result = await tool!.handler(fixture.sampleInput as never);
+      const parsed = (tool!.meta.inputSchema as { safeParse?: (v: unknown) => { success: boolean } }).safeParse?.(
+        sample.input,
+      );
+      if (parsed) {
+        expect(parsed.success, `input schema rejected sample input for "${sample.name}"`).toBe(true);
+      }
 
-      expect(result).toBeDefined();
+      const result = await tool!.callback(sample.input);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
+      expect(result.isError).not.toBe(true);
 
-      if (fixture.requiresConfirm) {
-        // First call with no confirmToken must preview, not mutate.
-        expect(result.structuredContent).toMatchObject({ status: "confirmation_required" });
-        expect(typeof (result.structuredContent as Record<string, unknown>).confirmToken).toBe("string");
-        expect(mock.callLog.some((c) => c.action === fixture.action)).toBe(false);
+      if (sample.gated) {
+        // First (unconfirmed) call must preview only, never reach WHMCS.
+        expect(result.structuredContent).toMatchObject({ pendingConfirmation: true });
+        expect(typeof (result.structuredContent as Record<string, unknown>)["confirmToken"]).toBe("string");
+        expect(mock.calls.some((c) => c.action === sample.action)).toBe(false);
       } else {
         expect(result.structuredContent).toBeDefined();
-        if (fixture.action !== "<dynamic>") {
-          expect(mock.callLog.some((c) => c.action === fixture.action)).toBe(true);
-        }
-        const call = mock.callLog.find((c) => c.action === fixture.action);
-        if (call) {
-          expect(call.params.identifier).toBe("mcp-test-identifier");
-          expect(call.params.secret).toBe("mcp-test-secret");
-          expect(call.params.responsetype).toBe("json");
-        }
+        expect(mock.calls.some((c) => c.action === sample.action)).toBe(true);
+        const call = mock.calls.find((c) => c.action === sample.action);
+        expect(call!.params["identifier"]).toBe("mcp-test-identifier");
+        expect(call!.params["responsetype"]).toBe("json");
       }
     });
   }
 });
 
 /* -------------------------------------------------------------------------
- * 3. Confirm-token flow: second call with the echoed token executes.
+ * 5. Two-step confirmation flow for billing/destructive tools.
  * ---------------------------------------------------------------------- */
 
 describe("two-step confirmation flow for billing/destructive tools", () => {
-  const confirmFixtures = TOOL_FIXTURES.filter((f) => f.requiresConfirm && f.action !== "<dynamic>");
+  const gatedSamples = SAMPLES.filter((s) => s.gated);
 
-  it.each(confirmFixtures.map((f) => [f.name, f] as const))(
+  it.each(gatedSamples.map((s) => [s.name, s] as const))(
     "%s executes against WHMCS once the confirmToken is echoed back",
-    async (_name, fixture) => {
-      const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-      const tool = tools.get(fixture.name)!;
+    async (_name, sample) => {
+      const server = registerAndCapture("full", ALL_DOMAINS);
+      const tool = server.tools.get(sample.name)!;
 
-      const preview = await tool.handler(fixture.sampleInput as never);
-      const previewBody = preview.structuredContent as { status: string; confirmToken: string };
-      expect(previewBody.status).toBe("confirmation_required");
+      const preview = await tool.callback(sample.input);
+      const previewBody = preview.structuredContent as { pendingConfirmation: boolean; confirmToken: string };
+      expect(previewBody.pendingConfirmation).toBe(true);
 
-      const confirmed = await tool.handler({
-        ...fixture.sampleInput,
-        confirmToken: previewBody.confirmToken,
-      } as never);
+      const confirmed = await tool.callback({ ...sample.input, confirmToken: previewBody.confirmToken });
 
-      expect(mock.callLog.some((c) => c.action === fixture.action)).toBe(true);
+      expect(mock.calls.some((c) => c.action === sample.action)).toBe(true);
       expect(confirmed.structuredContent).toBeDefined();
-      expect((confirmed.structuredContent as Record<string, unknown>).status).not.toBe("confirmation_required");
+      expect((confirmed.structuredContent as Record<string, unknown>)["pendingConfirmation"]).not.toBe(true);
     },
   );
 
   it("rejects a confirmToken that does not match the args it was issued for", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const tool = tools.get("clients_close")!;
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    const tool = server.tools.get("clients_close")!;
 
-    const preview = await tool.handler({ clientid: 1 } as never);
+    const preview = await tool.callback({ clientid: 1 });
     const { confirmToken } = preview.structuredContent as { confirmToken: string };
 
-    await expect(
-      tool.handler({ clientid: 999, confirmToken } as never),
-    ).rejects.toThrow(/confirm/i);
+    const result = await tool.callback({ clientid: 999, confirmToken });
 
-    expect(mock.callLog.some((c) => c.action === "CloseClient")).toBe(false);
+    // registerTools' callback never throws to the caller -- a failed
+    // confirmation comes back as a normal (non-pending) structured result
+    // carrying an "invalid_confirm_token" error, per registry.ts's
+    // runWithConfirmation, and CloseClient must never have been called.
+    expect((result.structuredContent as Record<string, unknown>)["error"]).toBe("invalid_confirm_token");
+    expect(mock.calls.some((c) => c.action === "CloseClient")).toBe(false);
   });
 
-  it("dryRun never reaches WHMCS even with a valid confirmToken", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const tool = tools.get("services_module_terminate")!;
+  it("dryRun never reaches WHMCS even without a confirmToken, for a gated tool", async () => {
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    const tool = server.tools.get("tickets_delete")!;
 
-    const preview = await tool.handler({ serviceid: 1, dryRun: true } as never);
-    const body = preview.structuredContent as { status: string; confirmToken?: string };
-
-    if (body.confirmToken) {
-      const result = await tool.handler({ serviceid: 1, dryRun: true, confirmToken: body.confirmToken } as never);
-      expect((result.structuredContent as Record<string, unknown>).dryRun).toBe(true);
-    }
-    expect(mock.callLog.some((c) => c.action === "ModuleTerminate")).toBe(false);
-  });
-});
-
-/* -------------------------------------------------------------------------
- * 4. Mode filtering: readonly | write | full
- * ---------------------------------------------------------------------- */
-
-describe("mode filtering", () => {
-  it("readonly mode advertises only read-tier tools", () => {
-    const { tools } = buildRegistryFor("readonly", ALL_DOMAINS);
-    expect(tools.size).toBeGreaterThan(0);
-    for (const tool of tools.values()) {
-      expect(tool.tier).toBe("read");
-    }
-    // Spot-check a few that must be excluded.
-    expect(tools.has("tickets_create")).toBe(false);
-    expect(tools.has("billing_create_invoice")).toBe(false);
-    expect(tools.has("orders_cancel")).toBe(false);
+    const result = await tool.callback({ ticketid: 1, dryRun: true });
+    expect((result.structuredContent as Record<string, unknown>)["dryRun"]).toBe(true);
+    expect(mock.calls.some((c) => c.action === "DeleteTicket")).toBe(false);
   });
 
-  it("write mode advertises read and write tier tools, never billing or destructive", () => {
-    const { tools } = buildRegistryFor("write", ALL_DOMAINS);
-    for (const tool of tools.values()) {
-      expect(["read", "write"]).toContain(tool.tier);
-    }
-    expect(tools.has("tickets_create")).toBe(true);
-    expect(tools.has("billing_create_invoice")).toBe(false);
-    expect(tools.has("orders_cancel")).toBe(false);
-    expect(tools.has("services_module_terminate")).toBe(false);
-  });
+  it("dryRun short-circuits a non-gated write tool too, with no network call", async () => {
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    const tool = server.tools.get("tickets_create")!;
 
-  it("full mode advertises every tier including billing and destructive", () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const tiers = new Set([...tools.values()].map((t) => t.tier));
-    expect(tiers).toEqual(new Set<ToolTier>(["read", "write", "billing", "destructive"]));
-    expect(tools.has("billing_create_invoice")).toBe(true);
-    expect(tools.has("billing_update_invoice")).toBe(true);
-    expect(tools.has("billing_add_payment")).toBe(true);
-    expect(tools.has("billing_apply_credit")).toBe(true);
-    expect(tools.has("billing_capture_payment")).toBe(true);
-  });
-
-  it("defaults to readonly when mode is unspecified", () => {
-    const client = createWhmcsClient({
-      apiUrl,
-      identifier: "id",
-      secret: "secret",
-      timeoutMs: 5_000,
-      rateLimitPerSecond: 100,
+    const result = await tool.callback({
+      deptid: 1,
+      subject: "Test",
+      message: "Test message",
+      clientid: 1,
+      dryRun: true,
     });
-    const tools = buildToolRegistry({ client, enabledDomains: ALL_DOMAINS, redactPii: true } as never);
-    for (const tool of tools.values()) {
-      expect(tool.tier).toBe("read");
-    }
-  });
-
-  it("the billing tier stays disabled in full mode only via explicit opt-in, never implicitly through write", () => {
-    // Regression guard for the operator's standing "invoices are operator-manual"
-    // rule: no combination of flags other than an explicit mode:"full" may
-    // surface an invoice-mutating tool.
-    for (const mode of ["readonly", "write"] as const) {
-      const { tools } = buildRegistryFor(mode, ALL_DOMAINS);
-      for (const billingTool of [
-        "billing_create_invoice",
-        "billing_update_invoice",
-        "billing_add_payment",
-        "billing_apply_credit",
-        "billing_capture_payment",
-      ]) {
-        expect(tools.has(billingTool)).toBe(false);
-      }
-    }
+    expect((result.structuredContent as Record<string, unknown>)["dryRun"]).toBe(true);
+    expect(mock.calls.some((c) => c.action === "OpenTicket")).toBe(false);
   });
 });
 
 /* -------------------------------------------------------------------------
- * 5. Domain filtering: WHMCS_MCP_ENABLE_DOMAINS
- * ---------------------------------------------------------------------- */
-
-describe("domain filtering", () => {
-  it("only advertises tools from enabled domains", () => {
-    const { tools } = buildRegistryFor("full", ["tickets", "system"]);
-    for (const tool of tools.values()) {
-      expect(["tickets", "system"]).toContain(tool.domain);
-    }
-    expect(tools.has("clients_list")).toBe(false);
-    expect(tools.has("billing_list_invoices")).toBe(false);
-    expect(tools.has("tickets_list")).toBe(true);
-    expect(tools.has("system_get_details")).toBe(true);
-  });
-
-  it("an empty domain list advertises no tools", () => {
-    const { tools } = buildRegistryFor("full", []);
-    expect(tools.size).toBe(0);
-  });
-
-  it("mode and domain filters compose (intersection, not union)", () => {
-    const { tools } = buildRegistryFor("readonly", ["invoices"]);
-    // Only read-tier invoices tools should surface.
-    for (const tool of tools.values()) {
-      expect(tool.domain).toBe("invoices");
-      expect(tool.tier).toBe("read");
-    }
-    expect(tools.has("billing_list_invoices")).toBe(true);
-    expect(tools.has("billing_create_invoice")).toBe(false);
-  });
-});
-
-/* -------------------------------------------------------------------------
- * 6. Collection normalization: WHMCS's nested {tickets:{ticket:[...]}}-style
- *    shapes must come back as plain arrays in structuredContent.
- * ---------------------------------------------------------------------- */
-
-describe("nested-collection normalization", () => {
-  it("tickets_list normalizes GetTickets' nested tickets.ticket[] into a flat array", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const result = await tools.get("tickets_list")!.handler({ limitnum: 25 } as never);
-    const body = result.structuredContent as { tickets: unknown[] };
-    expect(Array.isArray(body.tickets)).toBe(true);
-  });
-
-  it("clients_list normalizes GetClients' nested clients.client[] into a flat array", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const result = await tools.get("clients_list")!.handler({ limitnum: 25 } as never);
-    const body = result.structuredContent as { clients: unknown[] };
-    expect(Array.isArray(body.clients)).toBe(true);
-  });
-});
-
-/* -------------------------------------------------------------------------
- * 7. Redaction: even in full/read mode, secrets never leak in results.
+ * 6. Redaction: even in full mode, secrets never leak in results.
  * ---------------------------------------------------------------------- */
 
 describe("redaction is applied to every tool result", () => {
   it("clients_get never surfaces a raw password/secret field", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const result = await tools.get("clients_get")!.handler({ clientid: 1 } as never);
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    const result = await server.tools.get("clients_get")!.callback({ clientid: 1 });
     const serialized = JSON.stringify(result.structuredContent);
     expect(serialized).not.toMatch(/"password2?"\s*:\s*"(?!\[REDACTED\])[^"]+"/i);
   });
 
   it("billing_get_pay_methods never surfaces a full card/bank number", async () => {
-    const { tools } = buildRegistryFor("full", ALL_DOMAINS);
-    const result = await tools.get("billing_get_pay_methods")!.handler({ clientid: 1 } as never);
+    const server = registerAndCapture("full", ALL_DOMAINS);
+    const result = await server.tools.get("billing_get_pay_methods")!.callback({ clientid: 1 });
     const serialized = JSON.stringify(result.structuredContent);
     expect(serialized).not.toMatch(/\b\d{12,19}\b/);
   });

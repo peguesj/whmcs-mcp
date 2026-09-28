@@ -177,7 +177,7 @@ const PHONE_PATTERN = /\b(?:\+?\d[\d\-. ()]{6,14}\d)\b/g;
 
 function redactValuePatterns(value: string, opts: RedactOptions): string {
   let out = value.replace(PAN_PATTERN, opts.mask ?? DEFAULT_MASK);
-  out = out.replace(CVV_INLINE_PATTERN, (match, label: string) => `${label}: ${opts.mask ?? DEFAULT_MASK}`);
+  out = out.replace(CVV_INLINE_PATTERN, (_match, label: string) => `${label}: ${opts.mask ?? DEFAULT_MASK}`);
   if (opts.redactPii) {
     out = out.replace(EMAIL_PATTERN, opts.mask ?? DEFAULT_MASK);
     out = out.replace(PHONE_PATTERN, opts.mask ?? DEFAULT_MASK);

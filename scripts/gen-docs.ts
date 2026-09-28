@@ -14,7 +14,7 @@
  *
  * This script imports the compiled tool registry rather than re-implementing
  * schema introspection, so it must run against a built (or tsx-executed) tree
- * that exposes `getToolRegistry()` from src/tools/registry.ts.
+ * that exposes `getAllToolDefinitions()` from src/tools/registry.ts.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -26,7 +26,19 @@ import { z } from "zod";
 // domain, tier, WHMCS action, zod schema, MCP annotations). gen-docs never
 // hand-maintains a parallel list of tools -- if a tool isn't registered there,
 // it will not appear in either generated artifact.
-import { getToolRegistry } from "../src/tools/registry.js";
+import { getAllToolDefinitions } from "../src/tools/registry.js";
+
+// getAllToolDefinitions() only returns what has actually been registered via
+// defineTool(...) as a module-load side effect -- import every built-in
+// domain module here (mirrors src/index.ts) so the generated docs cover the
+// full catalog, not whatever happened to be imported first.
+import "../src/tools/system.js";
+import "../src/tools/tickets.js";
+import "../src/tools/clients.js";
+import "../src/tools/products.js";
+import "../src/tools/invoices.js";
+import "../src/tools/domains.js";
+import "../src/tools/orders.js";
 import type { ToolTier } from "../src/safety/policy.js";
 
 interface RegisteredToolLike {
@@ -47,7 +59,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = join(__dirname, "..");
 const DOCS_MD_PATH = join(REPO_ROOT, "docs", "tools.md");
-const SITE_JSON_PATH = join(REPO_ROOT, "site", "data", "tools.json");
+const SITE_JSON_PATH = join(REPO_ROOT, "docs", "data", "tools.json");
 
 const TIER_ORDER: string[] = ["read", "write", "billing", "destructive"];
 
@@ -255,11 +267,11 @@ function renderSiteCatalog(tools: RegisteredToolLike[]): {
 }
 
 async function main(): Promise<void> {
-  const tools = (await getToolRegistry()) as RegisteredToolLike[];
+  const tools = getAllToolDefinitions() as unknown as RegisteredToolLike[];
 
   if (!Array.isArray(tools) || tools.length === 0) {
     throw new Error(
-      "gen-docs: getToolRegistry() returned no tools -- refusing to overwrite docs/tools.md and site/data/tools.json with an empty catalog",
+      "gen-docs: getAllToolDefinitions() returned no tools -- refusing to overwrite docs/tools.md and site/data/tools.json with an empty catalog",
     );
   }
 

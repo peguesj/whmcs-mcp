@@ -27,17 +27,15 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { WhmcsClient, WhmcsApiError } from "../whmcs-client.js";
 import type { WhmcsMcpConfig } from "../config.js";
-import { redactDeep } from "../safety/redact.js";
+import { redactUnknown, defaultRedactOptions } from "../safety/redact.js";
 import {
   isDomainEnabled,
-  isTierAllowedInMode,
+  isTierEnabledForMode,
   requiresConfirmation,
-  type WhmcsMcpMode,
 } from "../safety/policy.js";
 import {
-  createConfirmToken,
+  issueConfirmToken,
   consumeConfirmToken,
-  type ConfirmTokenPayload,
 } from "../safety/confirm.js";
 import { logger } from "../logger.js";
 
@@ -52,7 +50,8 @@ export type ToolDomain =
   | "products"
   | "invoices"
   | "domains"
-  | "orders";
+  | "orders"
+  | "custom";
 
 /**
  * MCP tool annotations, per the MCP spec's ToolAnnotations shape. These are
@@ -98,12 +97,12 @@ export interface ToolHandlerResult {
  * rather than redeclaring them; this registry reads them generically via
  * the parsed input object.
  */
-interface ConfirmableInput {
-  dryRun?: boolean;
-  confirmToken?: string;
+export interface ConfirmableInput {
+  dryRun?: boolean | undefined;
+  confirmToken?: string | undefined;
 }
 
-export interface ToolDefinition<TInput extends ConfirmableInput> {
+export interface ToolDefinition<TInput extends Record<string, unknown> = Record<string, unknown>> {
   /** MCP tool name, e.g. "tickets_create". Must be unique across the whole server. */
   name: string;
   /** WHMCS domain grouping, used for WHMCS_MCP_ENABLE_DOMAINS filtering. */
@@ -133,10 +132,12 @@ export interface ToolDefinition<TInput extends ConfirmableInput> {
 }
 
 /** Internal registry of every tool defined via `defineTool`, keyed by name. Used for docs generation and tests. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous registry: each entry's real TInput differs per tool, safely narrowed again by runWithConfirmation/registerTools before use.
 const TOOL_REGISTRY = new Map<string, ToolDefinition<any>>();
 
 /** Returns every tool definition registered so far (for scripts/gen-docs.ts and test/tools.test.ts). */
-export function getAllToolDefinitions(): ReadonlyArray<ToolDefinition<any>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- see TOOL_REGISTRY above.
+export function getAllToolDefinitions(): readonly ToolDefinition<any>[] {
   return Array.from(TOOL_REGISTRY.values());
 }
 
@@ -145,7 +146,7 @@ export function getAllToolDefinitions(): ReadonlyArray<ToolDefinition<any>> {
  * McpServer. Call `registerTools(server, ctx)` once all domain modules have
  * called `defineTool` to actually advertise the filtered set.
  */
-export function defineTool<TInput extends ConfirmableInput>(
+export function defineTool<TInput extends Record<string, unknown>>(
   def: ToolDefinition<TInput>,
 ): ToolDefinition<TInput> {
   if (TOOL_REGISTRY.has(def.name)) {
@@ -167,6 +168,7 @@ interface CallToolResult {
   content: CallToolTextBlock[];
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
+  [key: string]: unknown;
 }
 
 function toTextSummary(data: unknown, fallback: string): string {
@@ -204,11 +206,12 @@ function wrapStructuredContent(data: unknown): Record<string, unknown> | undefin
  *  3. `dryRun: true` always short-circuits to a preview and never consumes
  *     or requires a confirmToken, regardless of tier.
  */
-async function runWithConfirmation<TInput extends ConfirmableInput>(
+async function runWithConfirmation<TInput extends Record<string, unknown>>(
   def: ToolDefinition<TInput>,
   input: TInput,
 ): Promise<ToolHandlerResult> {
-  if (input.dryRun) {
+  const confirmable = input as ConfirmableInput;
+  if (confirmable.dryRun) {
     return {
       data: {
         dryRun: true,
@@ -232,10 +235,8 @@ async function runWithConfirmation<TInput extends ConfirmableInput>(
     const preview = def.buildConfirmationPreview
       ? def.buildConfirmationPreview(input)
       : `This will call WHMCS action "${def.whmcsAction}" via tool "${def.name}". Re-run with the returned confirmToken to proceed.`;
-    const token = createConfirmToken({
-      toolName: def.name,
-      input: inputForHash,
-    } satisfies ConfirmTokenPayload);
+    const issued = issueConfirmToken(def.name, inputForHash);
+    const token = issued.token;
     return {
       data: {
         pendingConfirmation: true,
@@ -254,18 +255,15 @@ async function runWithConfirmation<TInput extends ConfirmableInput>(
   // Validates token freshness, single-use, and that it was minted for this
   // exact tool name + input hash — a confirmToken cannot be replayed against
   // different arguments or a different tool.
-  const validation = consumeConfirmToken(confirmToken as string, {
-    toolName: def.name,
-    input: inputForHash,
-  });
+  const validation = consumeConfirmToken(confirmToken as string, def.name, inputForHash);
   if (!validation.ok) {
     return {
       data: {
         error: "invalid_confirm_token",
-        reason: validation.reason,
+        reason: (validation as { ok: false; reason: string }).reason,
         tool: def.name,
       },
-      summary: `Confirmation failed for ${def.name}: ${validation.reason}. Call again without confirmToken to get a fresh one.`,
+      summary: `Confirmation failed for ${def.name}: ${(validation as { ok: false; reason: string }).reason}. Call again without confirmToken to get a fresh one.`,
     };
   }
 
@@ -287,8 +285,11 @@ let currentCtx: ToolContext = null as unknown as ToolContext;
  */
 export function registerTools(server: McpServer, ctx: ToolContext): void {
   currentCtx = ctx;
-  const mode = ctx.config.mode as WhmcsMcpMode;
-  const enabledDomains = ctx.config.enabledDomains;
+  const mode = ctx.config.mode;
+  const enabledDomains: ReadonlySet<ToolDomain> | undefined =
+    ctx.config.enabledDomains.length > 0
+      ? new Set(ctx.config.enabledDomains as ToolDomain[])
+      : undefined;
 
   let registered = 0;
   let skipped = 0;
@@ -298,7 +299,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       skipped++;
       continue;
     }
-    if (!isTierAllowedInMode(def.tier, mode)) {
+    if (!isTierEnabledForMode(def.tier, mode)) {
       skipped++;
       continue;
     }
@@ -319,26 +320,47 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         inputSchema: def.inputSchema as unknown as z.ZodRawShape,
         annotations,
       },
-      async (rawInput: unknown): Promise<CallToolResult> => {
+      async (rawInput: unknown, _extra: unknown): Promise<CallToolResult> => {
         const parsed = def.inputSchema.parse(rawInput) as ConfirmableInput & Record<string, unknown>;
         try {
           const result = await runWithConfirmation(def, parsed as never);
-          const redacted = redactDeep(result.data, ctx.config.redactPii);
+          let redacted = redactUnknown(result.data, { ...defaultRedactOptions(), redactPii: ctx.config.redactPii });
+          // The confirmToken this registry just minted (result.pendingConfirmation
+          // === true) is an opaque, single-use, short-TTL bearer value the caller
+          // MUST echo back verbatim to complete the confirm flow — it is not a
+          // WHMCS secret. The generic redaction pass above matches any key
+          // containing "token" (to catch gateway/session tokens in WHMCS
+          // responses) and would otherwise mask this one into "[REDACTED]",
+          // making the two-step confirm flow impossible to complete. Restore it.
+          if (
+            result.pendingConfirmation &&
+            result.data &&
+            typeof result.data === "object" &&
+            "confirmToken" in (result.data as Record<string, unknown>) &&
+            redacted &&
+            typeof redacted === "object"
+          ) {
+            redacted = {
+              ...(redacted as Record<string, unknown>),
+              confirmToken: (result.data as Record<string, unknown>).confirmToken,
+            };
+          }
           const text = result.summary
-            ? redactDeep(result.summary, ctx.config.redactPii) as string
+            ? (redactUnknown(result.summary, { ...defaultRedactOptions(), redactPii: ctx.config.redactPii }) as string)
             : toTextSummary(redacted, `${def.name} completed.`);
 
+          const structured = wrapStructuredContent(redacted);
           return {
             content: [{ type: "text", text }],
-            structuredContent: wrapStructuredContent(redacted),
+            ...(structured !== undefined ? { structuredContent: structured } : {}),
           };
         } catch (err) {
           const apiErr = err as WhmcsApiError | Error;
           const message =
             "whmcsResult" in (apiErr as WhmcsApiError)
               ? (apiErr as WhmcsApiError).message
-              : (apiErr as Error).message ?? "Unknown error";
-          const redactedMessage = redactDeep(message, ctx.config.redactPii) as string;
+              : apiErr.message;
+          const redactedMessage = redactUnknown(message, { ...defaultRedactOptions(), redactPii: ctx.config.redactPii }) as string;
           logger.error(`tool ${def.name} failed`, { whmcsAction: def.whmcsAction });
           return {
             content: [
@@ -357,8 +379,8 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   }
 
   logger.info(
-    `whmcs-mcp: registered ${registered} tools, skipped ${skipped} (mode=${mode}, domains=${
-      enabledDomains?.join(",") ?? "all"
+    `whmcs-mcp: registered ${String(registered)} tools, skipped ${String(skipped)} (mode=${mode}, domains=${
+      enabledDomains ? [...enabledDomains].join(",") : "all"
     })`,
   );
 }

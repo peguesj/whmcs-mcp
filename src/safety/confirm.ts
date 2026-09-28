@@ -123,7 +123,7 @@ function canonicalize(value: unknown): unknown {
     return value.map(canonicalize);
   }
   if (value !== null && typeof value === "object") {
-    const sortedKeys = Object.keys(value as Record<string, unknown>).sort();
+    const sortedKeys = Object.keys(value).sort();
     const out: Record<string, unknown> = {};
     for (const key of sortedKeys) {
       out[key] = canonicalize((value as Record<string, unknown>)[key]);
@@ -253,7 +253,7 @@ export function consumeConfirmToken(token: string, toolName: string, args: unkno
 
   // Re-decode just to pull the nonce/exp for bookkeeping; verification above
   // already proved the token is well-formed and signed.
-  const [payloadB64] = token.split(".");
+  const payloadB64 = token.split(".")[0] ?? "";
   const payload = JSON.parse(fromBase64url(payloadB64).toString("utf8")) as ConfirmTokenPayload;
 
   pruneExpired(Date.now());
@@ -273,7 +273,7 @@ export function explainConfirmFailure(result: Extract<ConfirmVerifyResult, { ok:
     case "bad-signature":
       return "confirmToken signature is invalid.";
     case "expired":
-      return `confirmToken has expired (tokens are valid for ${CONFIRM_TOKEN_TTL_MS / 60000} minutes after issuance). Re-run the tool without confirmToken to get a fresh preview.`;
+      return `confirmToken has expired (tokens are valid for ${String(CONFIRM_TOKEN_TTL_MS / 60000)} minutes after issuance). Re-run the tool without confirmToken to get a fresh preview.`;
     case "tool-mismatch":
       return "confirmToken was issued for a different tool.";
     case "args-mismatch":

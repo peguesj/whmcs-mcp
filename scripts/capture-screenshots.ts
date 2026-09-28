@@ -63,7 +63,7 @@ const outFlagIdx = argv.indexOf("--out");
 const OUT_DIR =
   outFlagIdx !== -1 && argv[outFlagIdx + 1]
     ? path.resolve(process.cwd(), argv[outFlagIdx + 1]!)
-    : path.join(REPO_ROOT, "site", "assets", "screenshots");
+    : path.join(REPO_ROOT, "docs", "assets", "screenshots");
 
 const VIEWPORT = { width: 1440, height: 900 };
 

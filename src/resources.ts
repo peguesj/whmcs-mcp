@@ -48,7 +48,7 @@ import type {
   ResourceMetadata,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { WhmcsClient, unwrapCollection, WhmcsApiError } from "./whmcs-client.js";
+import { type WhmcsClient, unwrapCollection, WhmcsApiError } from "./whmcs-client.js";
 import type { WhmcsMcpConfig } from "./config.js";
 import { redactUnknown, redactError, type RedactOptions } from "./safety/redact.js";
 import { logger } from "./logger.js";
@@ -116,7 +116,7 @@ function jsonReadCallback(
 ): ReadResourceCallback {
   return async (uri) => {
     try {
-      const raw = (await client.call(whmcsAction)) as Record<string, unknown>;
+      const raw = await client.call<Record<string, unknown>>(whmcsAction);
       const shaped = shape(raw);
       const redacted = redactUnknown(shaped, redactOptions);
       return {
@@ -192,9 +192,9 @@ export function registerResources(
       (raw) => {
         const details = raw as unknown as WhmcsDetails;
         return {
-          version: details.whmcs?.version ?? null,
-          releaseStatus: details.whmcs?.release_status ?? null,
-          edition: details.whmcs?.edition ?? null,
+          version: details.whmcs.version,
+          releaseStatus: details.whmcs.release_status,
+          edition: details.whmcs.edition ?? null,
         };
       },
     ),
