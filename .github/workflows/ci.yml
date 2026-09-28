@@ -76,12 +76,20 @@ jobs:
           # Fail on anything that looks like a live WHMCS credential or a
           # generic high-entropy secret assignment committed to the tree.
           # .env.example is expected to contain only placeholders.
-          if grep -RInE \
+          #
+          # The negative lookahead excludes source-code property-access
+          # assignments (e.g. `env.WHMCS_API_ACCESS_KEY = credentials.accessKey;`
+          # in test/mock-whmcs-server.ts), which match the identifier-shaped
+          # part of this pattern without being a literal secret: a real
+          # committed literal is never immediately followed by `.<identifier>`.
+          # Requires -P (PCRE) for lookahead support; GNU grep on ubuntu-latest
+          # supports this.
+          if grep -RInP \
               --exclude-dir=node_modules \
               --exclude-dir=.git \
               --exclude-dir=dist \
               --exclude-dir=coverage \
-              'WHMCS_API_(IDENTIFIER|SECRET|ACCESS_KEY)\s*=\s*[A-Za-z0-9]{8,}' \
+              'WHMCS_API_(IDENTIFIER|SECRET|ACCESS_KEY)\s*=\s*[A-Za-z0-9]{8,}(?!\.)' \
               . ; then
             echo "::error::Possible committed WHMCS credential detected."
             exit 1
