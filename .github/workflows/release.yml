@@ -1,0 +1,110 @@
+name: Release
+
+# Tag-triggered npm publish with provenance for @peguesj/whmcs-mcp.
+#
+# Push a tag matching v* (e.g. v0.1.0) to publish. This workflow requires:
+#   - npm's "Trusted Publishing" / OIDC provenance support (npm CLI >= 9.5,
+#     configured here via `id-token: write` + `npm publish --provenance`).
+#   - An NPM_TOKEN repository secret with publish rights on @peguesj/whmcs-mcp,
+#     OR npm trusted publisher configuration for this repo (no token needed).
+#   - The package.json version to match the pushed tag (vX.Y.Z -> X.Y.Z).
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance (OIDC)
+
+jobs:
+  verify:
+    name: Verify before publish
+    runs-on: ubuntu-latest
+    outputs:
+      pkg-version: ${{ steps.pkg.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Docs drift check
+        run: npm run gen:docs --if-present
+
+      - name: Fail on generated docs drift
+        run: |
+          if [ -n "$(git status --porcelain -- docs/ site/data/ 2>/dev/null)" ]; then
+            echo "::error::Generated docs are out of date. Run 'npm run gen:docs' and commit the result."
+            git status --porcelain -- docs/ site/data/
+            exit 1
+          fi
+
+      - name: npm pack (dry run)
+        run: npm pack --dry-run
+
+      - name: Read package.json version
+        id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm tag matches package.json version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="${{ steps.pkg.outputs.version }}"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Tag v$tag does not match package.json version $pkg"
+            exit 1
+          fi
+
+  publish:
+    name: Publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Publish with provenance
+        run: npm publish --access public --provenance
+        env:
+          # Required unless the registry has trusted-publisher (OIDC-only) config
+          # for this repo/workflow. Leave NPM_TOKEN unset in repo secrets once
+          # trusted publishing is configured, and this step still succeeds via
+          # the OIDC id-token above.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          name: v${{ needs.verify.outputs.pkg-version }}

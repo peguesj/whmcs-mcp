@@ -1,0 +1,146 @@
+{
+  "GetClients": {
+    "result": "success",
+    "totalresults": 2,
+    "startnumber": 0,
+    "numreturned": 2,
+    "clients": {
+      "client": [
+        {
+          "id": 5001,
+          "firstname": "Fixture",
+          "lastname": "Client One",
+          "companyname": "Fixture Co One",
+          "email": "[redacted]",
+          "status": "Active",
+          "groupid": 1,
+          "currency": 1
+        },
+        {
+          "id": 5002,
+          "firstname": "Fixture",
+          "lastname": "Client Two",
+          "companyname": "Fixture Co Two",
+          "email": "[redacted]",
+          "status": "Active",
+          "groupid": 1,
+          "currency": 1
+        }
+      ]
+    }
+  },
+  "GetClientsDetails": {
+    "result": "success",
+    "client_id": 5001,
+    "firstname": "Fixture",
+    "lastname": "Client One",
+    "companyname": "Fixture Co One",
+    "email": "[redacted]",
+    "address1": "1 Fixture Way",
+    "city": "Example City",
+    "state": "EX",
+    "postcode": "00000",
+    "country": "US",
+    "phonenumber": "[redacted]",
+    "status": "Active",
+    "credit": "0.00",
+    "cctype": "[redacted]",
+    "cclastfour": "[redacted]",
+    "notes": "Synthetic client fixture; no real PII."
+  },
+  "AddClient": {
+    "result": "success",
+    "clientid": 5050
+  },
+  "UpdateClient": {
+    "result": "success",
+    "clientid": 5001
+  },
+  "CloseClient": {
+    "result": "success"
+  },
+  "GetContacts": {
+    "result": "success",
+    "totalresults": 1,
+    "contacts": {
+      "contact": [
+        {
+          "id": 8001,
+          "userid": 5001,
+          "firstname": "Fixture",
+          "lastname": "Contact One",
+          "email": "[redacted]",
+          "permissions": "General Contact,Billing Contact"
+        }
+      ]
+    }
+  },
+  "AddContact": {
+    "result": "success",
+    "contactid": 8010
+  },
+  "UpdateContact": {
+    "result": "success"
+  },
+  "GetEmails": {
+    "result": "success",
+    "totalresults": 1,
+    "emails": {
+      "email": [
+        {
+          "id": 6001,
+          "date": "2026-09-25 08:00:00",
+          "subject": "Fixture: Invoice Generated",
+          "to": "[redacted]",
+          "from": "billing@fixture-hosting.example"
+        }
+      ]
+    }
+  },
+  "GetClientGroups": {
+    "result": "success",
+    "totalresults": 1,
+    "groups": {
+      "group": [{ "id": 1, "name": "Fixture Default Group" }]
+    }
+  },
+  "GetClientsProducts": {
+    "result": "success",
+    "totalresults": 1,
+    "products": {
+      "product": [
+        {
+          "id": 7001,
+          "pid": 3,
+          "userid": 5001,
+          "name": "Fixture Shared Hosting",
+          "domain": "fixture-client-one.example",
+          "status": "Active",
+          "billingcycle": "Monthly",
+          "recurringamount": "9.99",
+          "nextduedate": "2026-10-25",
+          "username": "fixtureuser",
+          "password": "[redacted]"
+        }
+      ]
+    }
+  },
+  "GetClientsAddons": {
+    "result": "success",
+    "totalresults": 1,
+    "addons": {
+      "addon": [
+        {
+          "id": 9101,
+          "userid": 5001,
+          "serviceid": 7001,
+          "name": "Fixture Extra Backups",
+          "status": "Active",
+          "recurring": "2.00",
+          "billingcycle": "Monthly",
+          "nextduedate": "2026-10-25"
+        }
+      ]
+    }
+  }
+}

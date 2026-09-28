@@ -1,0 +1,45 @@
+{
+  "GetOrders": {
+    "result": "success",
+    "totalresults": 1,
+    "orders": {
+      "order": [
+        {
+          "id": 6001,
+          "userid": 5002,
+          "ordernum": "FIXTURE-ORD-0001",
+          "date": "2026-09-20",
+          "status": "Pending",
+          "amount": "39.99",
+          "paymentmethod": "mockgateway"
+        }
+      ]
+    }
+  },
+  "GetOrderStatuses": {
+    "result": "success",
+    "statuses": {
+      "status": ["Pending", "Active", "Fraud", "Cancelled"]
+    }
+  },
+  "AddOrder": {
+    "result": "success",
+    "orderid": 6050,
+    "invoiceid": 9051
+  },
+  "AcceptOrder": {
+    "result": "success"
+  },
+  "PendingOrder": {
+    "result": "success"
+  },
+  "CancelOrder": {
+    "result": "success"
+  },
+  "FraudOrder": {
+    "result": "success"
+  },
+  "DeleteOrder": {
+    "result": "success"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "GetClientsDomains": {
+    "result": "success",
+    "totalresults": 1,
+    "domains": {
+      "domain": [
+        {
+          "id": 8801,
+          "userid": 5001,
+          "domainname": "fixture-client-one.example",
+          "registrar": "mockregistrar",
+          "regdate": "2025-09-25",
+          "expirydate": "2026-09-25",
+          "status": "Active",
+          "nextduedate": "2026-09-25"
+        }
+      ]
+    }
+  },
+  "DomainWhois": {
+    "result": "success",
+    "domain": "fixture-available-domain.example",
+    "available": true,
+    "tld": ".example",
+    "premium": false
+  },
+  "DomainGetNameservers": {
+    "result": "success",
+    "ns1": "ns1.fixture-dns.example",
+    "ns2": "ns2.fixture-dns.example"
+  },
+  "DomainUpdateNameservers": {
+    "result": "success"
+  },
+  "DomainGetLockingStatus": {
+    "result": "success",
+    "locking_status": "locked"
+  },
+  "DomainUpdateLockingStatus": {
+    "result": "success"
+  },
+  "DomainGetWhoisInfo": {
+    "result": "success",
+    "registrant": {
+      "firstname": "[redacted]",
+      "lastname": "[redacted]",
+      "companyname": "Fixture Co One",
+      "email": "[redacted]",
+      "address1": "[redacted]",
+      "city": "[redacted]",
+      "country": "US"
+    }
+  },
+  "UpdateClientDomain": {
+    "result": "success"
+  },
+  "DomainRenew": {
+    "result": "success",
+    "invoiceid": 9060
+  },
+  "DomainRegister": {
+    "result": "success",
+    "invoiceid": 9061
+  },
+  "DomainTransfer": {
+    "result": "success",
+    "invoiceid": 9062
+  },
+  "GetTLDPricing": {
+    "result": "success",
+    "pricing": {
+      "example": {
+        "register": { "1": "12.99" },
+        "transfer": { "1": "12.99" },
+        "renew": { "1": "14.99" }
+      }
+    }
+  }
+}

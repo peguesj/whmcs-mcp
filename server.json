@@ -1,0 +1,91 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-06-18/server.schema.json",
+  "name": "io.github.peguesj/whmcs-mcp",
+  "description": "MCP server for the WHMCS External API: read-only by default, write actions opt-in per domain, confirmation-gated billing/destructive mutations, PII/secret redaction, and runtime version detection (verified against the 8.12.x and 9.0.x contract).",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/peguesj/whmcs-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@peguesj/whmcs-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "node",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "WHMCS_API_URL",
+          "description": "Base URL of the WHMCS install, e.g. https://billing.example.com (the client POSTs to {WHMCS_API_URL}/includes/api.php). HTTPS required unless WHMCS_MCP_ALLOW_INSECURE=1.",
+          "isRequired": true,
+          "isSecret": false
+        },
+        {
+          "name": "WHMCS_API_IDENTIFIER",
+          "description": "API Credentials identifier created in WHMCS (Setup > Staff Management > API Credentials), scoped to a least-privilege API Role.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "WHMCS_API_SECRET",
+          "description": "API Credentials secret paired with WHMCS_API_IDENTIFIER. Never logged; redacted from all tool output and error messages.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "WHMCS_API_ACCESS_KEY",
+          "description": "Optional $api_access_key value, used instead of / in addition to IP allowlisting on the WHMCS side.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "WHMCS_MCP_MODE",
+          "description": "Advertised tool tiers: readonly (default; read tools only), write (adds write + destructive-with-confirm tools), full (also adds the billing tier and whmcs_raw_call). Invoice-mutating tools stay behind full regardless of this value's other effects.",
+          "isRequired": false,
+          "default": "readonly"
+        },
+        {
+          "name": "WHMCS_MCP_ENABLE_DOMAINS",
+          "description": "Comma-separated allowlist of tool domains to advertise (system,tickets,clients,products,invoices,domains,orders). Omit to advertise all domains permitted by WHMCS_MCP_MODE.",
+          "isRequired": false
+        },
+        {
+          "name": "WHMCS_MCP_REDACT_PII",
+          "description": "1 (default) redacts client PII (email, phone, address) from tool output in addition to secrets/payment data; 0 disables PII redaction (secrets and payment data are always redacted).",
+          "isRequired": false,
+          "default": "1"
+        },
+        {
+          "name": "WHMCS_MCP_TIMEOUT_MS",
+          "description": "Per-request timeout in milliseconds for calls to the WHMCS External API.",
+          "isRequired": false,
+          "default": "15000"
+        },
+        {
+          "name": "WHMCS_MCP_RATE_LIMIT",
+          "description": "Token-bucket requests-per-minute cap enforced by the client against the WHMCS External API.",
+          "isRequired": false,
+          "default": "60"
+        },
+        {
+          "name": "WHMCS_MCP_ALLOW_INSECURE",
+          "description": "Set to 1 only for local/dev testing against a non-HTTPS WHMCS_API_URL. Never set in a production deployment.",
+          "isRequired": false,
+          "default": "0"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "description": "Optional local Streamable HTTP transport, started with `whmcs-mcp --http` and bound to 127.0.0.1 only. Uses the same environment variables as the stdio package above; not published as a hosted remote.",
+      "url": "http://127.0.0.1:8787/mcp"
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "WhmcsDetails": {
+    "result": "success",
+    "version": "9.0.6",
+    "build": "release.1"
+  },
+  "GetStats": {
+    "result": "success",
+    "income_alltime": "128430.55",
+    "income_thismonth": "4210.00",
+    "income_thisyear": "48210.75",
+    "num_clients_active": 42,
+    "num_clients_inactive": 6,
+    "num_orders_pending": 2,
+    "num_tickets_open": 5,
+    "num_invoices_unpaid": 3
+  },
+  "GetActivityLog": {
+    "result": "success",
+    "totalresults": 2,
+    "activity": {
+      "entry": [
+        {
+          "id": 90001,
+          "date": "2026-09-27 09:14:00",
+          "user": "Synthetic Admin",
+          "description": "Client profile updated for Fixture Client 1 (Client ID: 5001)",
+          "ipaddr": "203.0.113.10"
+        },
+        {
+          "id": 90002,
+          "date": "2026-09-27 10:02:11",
+          "user": "System",
+          "description": "Cron Job Execution Completed",
+          "ipaddr": "127.0.0.1"
+        }
+      ]
+    }
+  },
+  "GetAdminDetails": {
+    "result": "success",
+    "roleid": 3,
+    "rolename": "Synthetic API Role (Read Only)",
+    "firstname": "Fixture",
+    "lastname": "Admin",
+    "email": "[redacted]",
+    "permissions": ["GetTickets", "GetClients", "GetInvoices", "WhmcsDetails"]
+  },
+  "GetToDoItems": {
+    "result": "success",
+    "totalresults": 1,
+    "items": {
+      "item": [
+        {
+          "id": 301,
+          "date": "2026-09-30",
+          "description": "Review synthetic renewal batch",
+          "status": "Incomplete"
+        }
+      ]
+    }
+  },
+  "GetEmailTemplates": {
+    "result": "success",
+    "totalresults": 1,
+    "templates": {
+      "template": [
+        {
+          "id": 12,
+          "name": "Fixture Welcome Email",
+          "subject": "Welcome to Fixture Hosting Co, {$client_name}",
+          "type": "general",
+          "language": "english",
+          "message": "Synthetic body content for fixture email template."
+        }
+      ]
+    }
+  },
+  "SendEmail": {
+    "result": "success",
+    "message": "Success (fixture: no email actually sent)"
+  },
+  "GetPaymentMethods": {
+    "result": "success",
+    "totalresults": 2,
+    "paymentmethods": {
+      "paymentmethod": [
+        { "module": "banktransfer", "displayname": "Bank Transfer (Fixture)" },
+        { "module": "mockgateway", "displayname": "Mock Card Gateway (Fixture)" }
+      ]
+    }
+  },
+  "GetCurrencies": {
+    "result": "success",
+    "defaultcurrency": 1,
+    "currencies": {
+      "currency": [
+        { "id": 1, "code": "USD", "prefix": "$", "suffix": "", "rate": "1.00" },
+        { "id": 2, "code": "EUR", "prefix": "", "suffix": " EUR", "rate": "0.92" }
+      ]
+    }
+  },
+  "LogActivity": {
+    "result": "success",
+    "message": "Success (fixture: logged to mock server only)"
+  },
+  "RawAllowlist": [
+    "WhmcsDetails",
+    "GetStats",
+    "GetActivityLog",
+    "GetAdminDetails",
+    "GetToDoItems",
+    "GetEmailTemplates",
+    "SendEmail",
+    "GetPaymentMethods",
+    "GetCurrencies",
+    "LogActivity",
+    "GetTickets",
+    "GetTicket",
+    "OpenTicket",
+    "AddTicketReply",
+    "AddTicketNote",
+    "GetTicketNotes",
+    "UpdateTicket",
+    "UpdateTicketReply",
+    "MergeTicket",
+    "DeleteTicket",
+    "GetTicketAttachment",
+    "GetTicketCounts",
+    "GetSupportDepartments",
+    "GetSupportStatuses",
+    "GetTicketPredefinedReplies",
+    "GetClients",
+    "GetClientsDetails",
+    "AddClient",
+    "UpdateClient",
+    "CloseClient",
+    "GetContacts",
+    "AddContact",
+    "UpdateContact",
+    "GetEmails",
+    "GetClientGroups",
+    "GetClientsProducts",
+    "GetClientsAddons",
+    "GetProducts",
+    "GetPromotions",
+    "UpdateClientProduct",
+    "UpdateClientAddon",
+    "UpgradeProduct",
+    "ModuleCreate",
+    "ModuleSuspend",
+    "ModuleUnsuspend",
+    "ModuleTerminate",
+    "ModuleChangePackage",
+    "GetInvoices",
+    "GetInvoice",
+    "CreateInvoice",
+    "UpdateInvoice",
+    "AddInvoicePayment",
+    "ApplyCredit",
+    "CapturePayment",
+    "AddCredit",
+    "GetCredits",
+    "GetTransactions",
+    "AddBillableItem",
+    "GetPayMethods",
+    "GetQuotes",
+    "CreateQuote",
+    "UpdateQuote",
+    "SendQuote",
+    "GetClientsDomains",
+    "DomainWhois",
+    "DomainGetNameservers",
+    "DomainUpdateNameservers",
+    "DomainGetLockingStatus",
+    "DomainUpdateLockingStatus",
+    "DomainGetWhoisInfo",
+    "UpdateClientDomain",
+    "DomainRenew",
+    "DomainRegister",
+    "DomainTransfer",
+    "GetTLDPricing",
+    "GetOrders",
+    "GetOrderStatuses",
+    "AddOrder",
+    "AcceptOrder",
+    "PendingOrder",
+    "CancelOrder",
+    "FraudOrder",
+    "DeleteOrder"
+  ]
+}

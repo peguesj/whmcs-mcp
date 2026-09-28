@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Illustrative example: tickets_list tool call and response</title>
+  <desc id="d2">Not a real screenshot. Synthetic terminal mockup showing the tickets_list MCP tool call filtered to open tickets, returning two mock support tickets with redacted-looking sample data.</desc>
+  <rect width="720" height="340" rx="10" fill="#0d1117"/>
+  <rect x="0" y="0" width="720" height="34" rx="10" fill="#161b22"/>
+  <circle cx="18" cy="17" r="6" fill="#ff5f56"/>
+  <circle cx="38" cy="17" r="6" fill="#ffbd2e"/>
+  <circle cx="58" cy="17" r="6" fill="#27c93f"/>
+  <text x="360" y="22" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#8b949e">mcp-inspector — synthetic fixture data (illustrative)</text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+    <text x="20" y="64" fill="#7ee787">&gt;</text>
+    <text x="36" y="64" fill="#c9d1d9">call tickets_list { "status": "Open", "limitnum": 2 }</text>
+    <text x="20" y="94" fill="#8b949e">// response (mock fixture — tier: read, always advertised)</text>
+    <text x="20" y="118" fill="#c9d1d9">{ "tickets": [</text>
+    <text x="40" y="142" fill="#c9d1d9">{ </text><text x="56" y="142" fill="#79c0ff">"tid"</text><text x="90" y="142" fill="#c9d1d9">: </text><text x="102" y="142" fill="#ffa657">4821</text><text x="132" y="142" fill="#c9d1d9">, </text><text x="148" y="142" fill="#79c0ff">"subject"</text><text x="216" y="142" fill="#c9d1d9">: </text><text x="228" y="142" fill="#a5d6ff">"Domain renewal question"</text><text x="420" y="142" fill="#c9d1d9">,</text>
+    <text x="56" y="164" fill="#79c0ff">"status"</text><text x="118" y="164" fill="#c9d1d9">: </text><text x="130" y="164" fill="#a5d6ff">"Open"</text><text x="184" y="164" fill="#c9d1d9">, </text><text x="200" y="164" fill="#79c0ff">"name"</text><text x="248" y="164" fill="#c9d1d9">: </text><text x="260" y="164" fill="#a5d6ff">"Sample Client"</text><text x="392" y="164" fill="#c9d1d9">},</text>
+    <text x="40" y="188" fill="#c9d1d9">{ </text><text x="56" y="188" fill="#79c0ff">"tid"</text><text x="90" y="188" fill="#c9d1d9">: </text><text x="102" y="188" fill="#ffa657">4822</text><text x="132" y="188" fill="#c9d1d9">, </text><text x="148" y="188" fill="#79c0ff">"subject"</text><text x="216" y="188" fill="#c9d1d9">: </text><text x="228" y="188" fill="#a5d6ff">"Cannot access cPanel"</text><text x="400" y="188" fill="#c9d1d9">,</text>
+    <text x="56" y="210" fill="#79c0ff">"status"</text><text x="118" y="210" fill="#c9d1d9">: </text><text x="130" y="210" fill="#a5d6ff">"Open"</text><text x="184" y="210" fill="#c9d1d9">, </text><text x="200" y="210" fill="#79c0ff">"name"</text><text x="248" y="210" fill="#c9d1d9">: </text><text x="260" y="210" fill="#a5d6ff">"Test Account"</text><text x="380" y="210" fill="#c9d1d9">}</text>
+    <text x="20" y="234" fill="#c9d1d9">], </text><text x="52" y="234" fill="#79c0ff">"totalresults"</text><text x="152" y="234" fill="#c9d1d9">: </text><text x="164" y="234" fill="#ffa657">2</text><text x="176" y="234" fill="#c9d1d9">}</text>
+    <text x="20" y="266" fill="#3fb950">✓ PII redaction: off by default for staff-facing ticket lists</text>
+    <text x="20" y="290" fill="#8b949e">   set WHMCS_MCP_REDACT_PII=true to mask client email/phone/address</text>
+    <text x="20" y="314" fill="#8b949e">   tier: read — advertised in every WHMCS_MCP_MODE</text>
+  </g>
+</svg>

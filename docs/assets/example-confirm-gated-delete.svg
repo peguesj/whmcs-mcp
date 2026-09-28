@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Illustrative example: two-step confirm-gated tickets_delete call</title>
+  <desc id="d3">Not a real screenshot. Synthetic terminal mockup showing the destructive-tier tickets_delete tool: a first call returning a preview and confirmToken, then a second call echoing the token to actually execute the deletion.</desc>
+  <rect width="720" height="360" rx="10" fill="#0d1117"/>
+  <rect x="0" y="0" width="720" height="34" rx="10" fill="#161b22"/>
+  <circle cx="18" cy="17" r="6" fill="#ff5f56"/>
+  <circle cx="38" cy="17" r="6" fill="#ffbd2e"/>
+  <circle cx="58" cy="17" r="6" fill="#27c93f"/>
+  <text x="360" y="22" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#8b949e">mcp-inspector — synthetic fixture data (illustrative)</text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+    <text x="20" y="60" fill="#8b949e">// step 1 — tier: destructive, requires confirmToken</text>
+    <text x="20" y="84" fill="#7ee787">&gt;</text>
+    <text x="36" y="84" fill="#c9d1d9">call tickets_delete { "ticketid": 4821 }</text>
+    <text x="20" y="108" fill="#c9d1d9">{ </text><text x="36" y="108" fill="#79c0ff">"preview"</text><text x="98" y="108" fill="#c9d1d9">: </text><text x="110" y="108" fill="#a5d6ff">"Delete ticket #4821 — irreversible"</text><text x="20" y="130" fill="#c9d1d9">, </text><text x="36" y="130" fill="#79c0ff">"confirmToken"</text><text x="130" y="130" fill="#c9d1d9">: </text><text x="142" y="130" fill="#a5d6ff">"eyJhbGciOi...5m TTL"</text><text x="20" y="152" fill="#c9d1d9">}</text>
+
+    <text x="20" y="190" fill="#8b949e">// step 2 — echo the exact token to execute (single-use, 5 min TTL)</text>
+    <text x="20" y="214" fill="#7ee787">&gt;</text>
+    <text x="36" y="214" fill="#c9d1d9">call tickets_delete { "ticketid": 4821, "confirmToken": "eyJhbGciOi..." }</text>
+    <text x="20" y="238" fill="#c9d1d9">{ </text><text x="36" y="238" fill="#79c0ff">"deleted"</text><text x="98" y="238" fill="#c9d1d9">: </text><text x="112" y="238" fill="#ffa657">true</text><text x="150" y="238" fill="#c9d1d9">, </text><text x="166" y="238" fill="#79c0ff">"ticketid"</text><text x="230" y="238" fill="#c9d1d9">: </text><text x="242" y="238" fill="#ffa657">4821</text><text x="280" y="238" fill="#c9d1d9">}</text>
+
+    <text x="20" y="278" fill="#3fb950">✓ no mutation occurs without a matching, unexpired confirmToken</text>
+    <text x="20" y="302" fill="#8b949e">   pass dryRun: true on step 1 for a preview with zero state change</text>
+    <text x="20" y="326" fill="#8b949e">   destructive tier: hidden entirely in readonly mode</text>
+  </g>
+</svg>

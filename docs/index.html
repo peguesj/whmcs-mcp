@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@peguesj/whmcs-mcp — WHMCS MCP Server</title>
+<meta name="description" content="An MCP server for the WHMCS External API: read-only by default, confirmation-gated billing mutations, PII/secret redaction, and runtime version detection. MIT licensed, TypeScript.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%237c3aed'/%3E%3Ctext x='12' y='17' font-size='13' text-anchor='middle' fill='white' font-family='monospace'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f7f7fb; --bg-elev:#ffffff; --text:#151521; --text-dim:#54546b;
+    --border:#e3e3ee; --accent:#6d28d9; --accent-2:#0ea5a4; --code-bg:#12121c;
+    --code-text:#e5e7ef; --tier-read:#0f8a5f; --tier-write:#b7791f; --tier-billing:#c2410c; --tier-destructive:#b91c1c;
+    --radius:14px; --shadow:0 1px 2px rgba(20,20,40,.04), 0 8px 24px -12px rgba(20,20,40,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b0b12; --bg-elev:#141420; --text:#eceef4; --text-dim:#a3a3b8;
+      --border:#26263a; --accent:#a78bfa; --accent-2:#2dd4d0; --code-bg:#08080e; --code-text:#e5e7ef;
+      --tier-read:#34d399; --tier-write:#fbbf24; --tier-billing:#fb923c; --tier-destructive:#f87171;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0b12; --bg-elev:#141420; --text:#eceef4; --text-dim:#a3a3b8;
+    --border:#26263a; --accent:#a78bfa; --accent-2:#2dd4d0; --code-bg:#08080e; --code-text:#e5e7ef;
+    --tier-read:#34d399; --tier-write:#fbbf24; --tier-billing:#fb923c; --tier-destructive:#f87171;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 20px}
+  code, pre, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  header.topbar{
+    position:sticky; top:0; z-index:10; backdrop-filter:blur(8px);
+    background:color-mix(in srgb, var(--bg) 85%, transparent);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px}
+  .brand .dot{width:10px; height:10px; border-radius:3px; background:var(--accent); display:inline-block}
+  .topnav{display:flex; gap:20px; font-size:14px}
+  .topnav a{color:var(--text-dim)}
+  .topnav a:hover{color:var(--text)}
+
+  .hero{padding:72px 0 48px; text-align:center}
+  .hero .kicker{
+    display:inline-block; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent);
+    padding:5px 12px; border-radius:999px; margin-bottom:18px; border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .hero h1{font-size:clamp(28px,5vw,46px); line-height:1.15; margin:0 0 16px; letter-spacing:-.02em}
+  .hero h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero p.lead{font-size:18px; color:var(--text-dim); max-width:640px; margin:0 auto 28px}
+  .hero-actions{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:12px}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:11px 20px; border-radius:10px;
+    font-weight:600; font-size:14px; border:1px solid transparent; cursor:pointer;
+  }
+  .btn-primary{background:var(--accent); color:#fff}
+  .btn-primary:hover{background:color-mix(in srgb, var(--accent) 85%, black); text-decoration:none}
+  .btn-ghost{background:var(--bg-elev); color:var(--text); border-color:var(--border)}
+  .btn-ghost:hover{border-color:var(--accent); text-decoration:none}
+  .hero .badges{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px; font-size:12px; color:var(--text-dim)}
+  .badge{border:1px solid var(--border); background:var(--bg-elev); padding:4px 10px; border-radius:999px}
+
+  section{padding:56px 0}
+  h2.section-title{font-size:26px; margin:0 0 8px; letter-spacing:-.01em}
+  p.section-sub{color:var(--text-dim); margin:0 0 32px; max-width:640px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px}
+  .card{
+    background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; box-shadow:var(--shadow);
+  }
+  .card h3{margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:8px}
+  .card h3 .icon{
+    width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent) 14%, transparent); font-size:14px; flex-shrink:0;
+  }
+  .card p{margin:0 0 12px; color:var(--text-dim); font-size:14px}
+  .card .tools{font-size:12px; color:var(--text-dim); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; line-height:1.7; word-break:break-word}
+
+  .tiers{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:24px}
+  .tier-card{border:1px solid var(--border); border-radius:12px; padding:16px; background:var(--bg-elev)}
+  .tier-pill{display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:3px 9px; border-radius:999px; margin-bottom:10px; color:#fff}
+  .tier-read .tier-pill{background:var(--tier-read)}
+  .tier-write .tier-pill{background:var(--tier-write)}
+  .tier-billing .tier-pill{background:var(--tier-billing)}
+  .tier-destructive .tier-pill{background:var(--tier-destructive)}
+  .tier-card p{margin:0; font-size:13px; color:var(--text-dim)}
+  .tier-card code{font-size:12px}
+
+  pre.code-block{
+    background:var(--code-bg); color:var(--code-text); border-radius:12px; padding:18px 20px;
+    overflow-x:auto; font-size:13.5px; line-height:1.65; box-shadow:var(--shadow);
+  }
+  .code-tabs{display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap}
+  .code-tab{
+    font-size:12.5px; padding:6px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg-elev); cursor:pointer; color:var(--text-dim);
+  }
+  .code-tab.active{background:var(--accent); color:#fff; border-color:transparent}
+  .code-panel{display:none}
+  .code-panel.active{display:block}
+
+  .shots{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px}
+  figure.shot{margin:0; background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow)}
+  figure.shot img{width:100%; height:auto; display:block; border-radius:8px; border:1px solid var(--border)}
+  figure.shot figcaption{font-size:12.5px; color:var(--text-dim); margin-top:10px}
+  figure.shot figcaption strong{color:var(--text)}
+  .illustrative-note{font-size:12.5px; color:var(--text-dim); border:1px dashed var(--border); border-radius:10px; padding:10px 14px; margin-bottom:18px}
+
+  .safety-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px}
+  .safety-item{border:1px solid var(--border); border-radius:12px; padding:18px; background:var(--bg-elev)}
+  .safety-item h4{margin:0 0 6px; font-size:14.5px}
+  .safety-item p{margin:0; font-size:13.5px; color:var(--text-dim)}
+
+  footer{border-top:1px solid var(--border); padding:36px 0 56px}
+  .footer-inner{display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:flex-start}
+  .footer-col h5{margin:0 0 10px; font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em}
+  .footer-col a{display:block; font-size:14px; margin-bottom:8px; color:var(--text)}
+  .footer-note{font-size:12.5px; color:var(--text-dim); margin-top:28px}
+
+  ::selection{background:color-mix(in srgb, var(--accent) 30%, transparent)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="dot"></span> whmcs-mcp</div>
+    <nav class="topnav">
+      <a href="#features">Domains</a>
+      <a href="#safety">Safety</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#examples">Examples</a>
+      <a href="https://github.com/peguesj/whmcs-mcp">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="kicker">Model Context Protocol · WHMCS 8.12.x &amp; 9.0.x</span>
+    <h1>An <span class="grad">MCP server</span> for WHMCS,<br>built to not blow up your billing system</h1>
+    <p class="lead">
+      Read-only by default. Write actions opt-in per domain. Billing and destructive mutations
+      require a two-step confirmation. Secrets, card data, and PII are redacted before results
+      ever reach the model.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#quickstart">Get started</a>
+      <a class="btn btn-ghost" href="https://github.com/peguesj/whmcs-mcp">View on GitHub</a>
+    </div>
+    <div class="badges">
+      <span class="badge">MIT licensed</span>
+      <span class="badge">TypeScript</span>
+      <span class="badge">@peguesj/whmcs-mcp on npm</span>
+      <span class="badge">80+ typed tools</span>
+      <span class="badge">7 domains</span>
+    </div>
+  </section>
+
+  <section id="features" class="wrap">
+    <h2 class="section-title">One tool domain per WHMCS surface</h2>
+    <p class="section-sub">
+      Tools mirror <code>src/tools/*.ts</code> — each domain has its own zod schemas, its own
+      tier assignments, and can be toggled independently with <code>WHMCS_MCP_ENABLE_DOMAINS</code>.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3><span class="icon">🖥️</span> system</h3>
+        <p>Version discovery, activity log, stats, admin identity, email templates, payment methods, currencies.</p>
+        <div class="tools">system_get_details · system_get_stats · system_get_activity_log · system_get_admin_details · system_get_todo_items · system_get_email_templates · system_send_email · system_get_payment_methods · system_get_currencies · system_log_activity · whmcs_raw_call</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">🎫</span> tickets</h3>
+        <p>Full support-ticket lifecycle: list, reply, note, merge, delete, attachments, departments, statuses.</p>
+        <div class="tools">tickets_list · tickets_get · tickets_create · tickets_reply · tickets_add_note · tickets_get_notes · tickets_update · tickets_update_reply · tickets_merge · tickets_delete · tickets_get_attachment · tickets_get_counts · tickets_get_departments · tickets_get_statuses · tickets_get_predefined_replies</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">👤</span> clients</h3>
+        <p>Client and contact management with PII redaction applied on read per <code>WHMCS_MCP_REDACT_PII</code>.</p>
+        <div class="tools">clients_list · clients_get · clients_create · clients_update · clients_close · clients_get_contacts · clients_add_contact · clients_update_contact · clients_get_emails · clients_get_groups · clients_get_services · clients_get_addons</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">📦</span> products</h3>
+        <p>Product/promotion lookups, service &amp; addon updates, and the module lifecycle actions (create, suspend, terminate).</p>
+        <div class="tools">products_list · products_get_promotions · services_update · services_update_addon · services_upgrade · services_module_create · services_module_suspend · services_module_unsuspend · services_module_terminate · services_module_change_package</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">💳</span> invoices</h3>
+        <p>Invoices, payments, credits, transactions, billable items, and quotes. Every invoice-mutation tool ships in the <code>billing</code> tier, off unless <code>WHMCS_MCP_MODE=full</code>.</p>
+        <div class="tools">billing_list_invoices · billing_get_invoice · billing_create_invoice · billing_update_invoice · billing_add_payment · billing_apply_credit · billing_capture_payment · billing_add_credit · billing_get_credits · billing_get_transactions · billing_add_billable_item · billing_get_pay_methods · quotes_list · quotes_create · quotes_update · quotes_send</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">🌐</span> domains</h3>
+        <p>WHOIS/availability, nameservers, locking, registration, transfer, renewal, and TLD pricing.</p>
+        <div class="tools">domains_list · domains_whois_availability · domains_get_nameservers · domains_update_nameservers · domains_get_locking_status · domains_update_locking_status · domains_get_whois_info · domains_update · domains_renew · domains_register · domains_transfer · domains_get_tld_pricing</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">🧾</span> orders</h3>
+        <p>Order list/create/accept/pending/cancel and fraud-marking, plus order statuses.</p>
+        <div class="tools">orders_list · orders_get_statuses · orders_create · orders_accept · orders_pending · orders_cancel · orders_mark_fraud · orders_delete</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="safety" class="wrap">
+    <h2 class="section-title">Safety model</h2>
+    <p class="section-sub">Every tool has a tier. Every deployment has a mode. Modes gate which tiers get advertised at all.</p>
+
+    <div class="tiers">
+      <div class="tier-card tier-read">
+        <span class="tier-pill">read</span>
+        <p>No side effects. Always advertised in every mode. <code>tickets_list</code>, <code>clients_get</code>.</p>
+      </div>
+      <div class="tier-card tier-write">
+        <span class="tier-pill">write</span>
+        <p>Mutates non-billing state. Advertised in <code>write</code>/<code>full</code>. <code>tickets_reply</code>, <code>domains_update_nameservers</code>.</p>
+      </div>
+      <div class="tier-card tier-billing">
+        <span class="tier-pill">billing</span>
+        <p>Invoices, payments, orders, domain registration. Confirm-gated, <code>full</code> mode only. <code>billing_create_invoice</code>.</p>
+      </div>
+      <div class="tier-card tier-destructive">
+        <span class="tier-pill">destructive</span>
+        <p>Irreversible: delete, merge, terminate, mark-fraud. Always confirm-gated. <code>tickets_delete</code>.</p>
+      </div>
+    </div>
+
+    <div class="safety-grid" style="margin-top:28px">
+      <div class="safety-item">
+        <h4>Two-step confirm</h4>
+        <p>Billing/destructive calls return a preview + short-lived, single-use <code>confirmToken</code> (HMAC, 5-min TTL). Echo the token to actually execute.</p>
+      </div>
+      <div class="safety-item">
+        <h4>dryRun everywhere</h4>
+        <p>Every mutating tool accepts <code>dryRun: true</code> — same preview, zero network call, no token needed.</p>
+      </div>
+      <div class="safety-item">
+        <h4>Deep redaction</h4>
+        <p>API secrets, session/access keys, stored passwords, full card/bank numbers, CVV, and EPP codes are always stripped, on success and on error.</p>
+      </div>
+      <div class="safety-item">
+        <h4>Version awareness</h4>
+        <p><code>system_get_details</code> checks <code>WhmcsDetails</code> at startup and warns if the install is below WHMCS 8.0.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="quickstart" class="wrap">
+    <h2 class="section-title">Quick start</h2>
+    <p class="section-sub">Readonly mode by default — safe to point at a production WHMCS install on day one.</p>
+
+    <div class="code-tabs" role="tablist">
+      <button class="code-tab active" data-tab="install">Install</button>
+      <button class="code-tab" data-tab="env">Environment</button>
+      <button class="code-tab" data-tab="claude">Claude Code / Desktop</button>
+    </div>
+
+    <div class="code-panel active" id="panel-install">
+<pre class="code-block"><code>npm install -g @peguesj/whmcs-mcp
+# or run without installing:
+npx @peguesj/whmcs-mcp</code></pre>
+    </div>
+
+    <div class="code-panel" id="panel-env">
+<pre class="code-block"><code># .env — never commit real credentials
+WHMCS_API_URL=https://your-whmcs-install.example.com/includes/api.php
+WHMCS_API_IDENTIFIER=your-api-identifier
+WHMCS_API_SECRET=your-api-secret
+
+# optional
+WHMCS_API_ACCESS_KEY=
+WHMCS_MCP_MODE=readonly              # readonly (default) | write | full
+WHMCS_MCP_ENABLE_DOMAINS=            # e.g. tickets,clients,products
+WHMCS_MCP_REDACT_PII=true
+WHMCS_MCP_TIMEOUT_MS=15000
+WHMCS_MCP_RATE_LIMIT=5</code></pre>
+    </div>
+
+    <div class="code-panel" id="panel-claude">
+<pre class="code-block"><code>claude mcp add whmcs -- npx -y @peguesj/whmcs-mcp
+
+# or in claude_desktop_config.json / .mcp.json:
+{
+  "mcpServers": {
+    "whmcs": {
+      "command": "npx",
+      "args": ["-y", "@peguesj/whmcs-mcp"],
+      "env": {
+        "WHMCS_API_URL": "https://your-whmcs-install.example.com/includes/api.php",
+        "WHMCS_API_IDENTIFIER": "your-api-identifier",
+        "WHMCS_API_SECRET": "your-api-secret",
+        "WHMCS_MCP_MODE": "readonly"
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <section id="examples" class="wrap">
+    <h2 class="section-title">Illustrative examples</h2>
+    <div class="illustrative-note">
+      These are <strong>generated SVG mockups</strong>, not screenshots of a real system. They render synthetic
+      fixture data from the project's mock WHMCS server (<code>test/mock-whmcs-server.ts</code>) as viewed through
+      the MCP Inspector, so no real client or billing data is ever depicted here.
+    </div>
+    <div class="shots">
+      <figure class="shot">
+        <img src="assets/example-system-get-details.svg" alt="Illustrative mockup (not a real screenshot) of the system_get_details tool call returning a mock WHMCS version string in MCP Inspector, over synthetic fixture data.">
+        <figcaption><strong>system_get_details</strong> — version discovery at startup, used to detect and warn on unsupported WHMCS installs.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="assets/example-tickets-list.svg" alt="Illustrative mockup (not a real screenshot) of the tickets_list tool call returning two mock open support tickets, over synthetic fixture data.">
+        <figcaption><strong>tickets_list</strong> — a <code>read</code>-tier call, always advertised, shown with mock ticket fixtures.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="assets/example-confirm-gated-delete.svg" alt="Illustrative mockup (not a real screenshot) of the two-step confirmToken flow for the destructive tickets_delete tool, over synthetic fixture data.">
+        <figcaption><strong>tickets_delete</strong> — a <code>destructive</code>-tier call: preview + <code>confirmToken</code>, then a second call to execute.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div class="footer-col">
+      <h5>Project</h5>
+      <a href="https://github.com/peguesj/whmcs-mcp">GitHub repository</a>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/README.md">README</a>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/SECURITY.md">Security &amp; threat model</a>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/docs/tools.md">Full tool reference</a>
+    </div>
+    <div class="footer-col">
+      <h5>Install</h5>
+      <a href="https://www.npmjs.com/package/@peguesj/whmcs-mcp">npm: @peguesj/whmcs-mcp</a>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/docs/configuration.md">Configuration reference</a>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/docs/version-compatibility.md">WHMCS 8.x / 9.x compatibility</a>
+    </div>
+    <div class="footer-col">
+      <h5>License</h5>
+      <a href="https://github.com/peguesj/whmcs-mcp/blob/main/LICENSE">MIT © Jeremiah Pegues</a>
+    </div>
+  </div>
+  <div class="wrap footer-note">
+    Built for the <a href="https://developers.whmcs.com/api-reference/">WHMCS External API</a>. Not affiliated with or endorsed by WHMCS Limited.
+  </div>
+</footer>
+
+<script>
+  (function(){
+    try {
+      var tabs = document.querySelectorAll('.code-tab');
+      tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+          tabs.forEach(function(t){ t.classList.remove('active'); });
+          document.querySelectorAll('.code-panel').forEach(function(p){ p.classList.remove('active'); });
+          tab.classList.add('active');
+          var panel = document.getElementById('panel-' + tab.dataset.tab);
+          if (panel) panel.classList.add('active');
+        });
+      });
+    } catch (e) { /* no-op: tabs degrade to the first visible panel */ }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "name": "@peguesj/whmcs-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the WHMCS External API: read-only by default, write actions opt-in per domain, confirmation-gated billing mutations, PII/secret redaction, and runtime version detection (8.x/9.x compatible).",
+  "type": "module",
+  "license": "MIT",
+  "author": "Jeremiah Pegues",
+  "homepage": "https://peguesj.github.io/whmcs-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peguesj/whmcs-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/peguesj/whmcs-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "whmcs",
+    "billing",
+    "support-tickets",
+    "domains",
+    "claude"
+  ],
+  "bin": {
+    "whmcs-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "server.json",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test scripts --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gen:docs": "tsx scripts/gen-docs.ts",
+    "screenshots": "tsx scripts/capture-screenshots.ts",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

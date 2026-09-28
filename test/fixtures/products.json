@@ -1,0 +1,77 @@
+{
+  "GetProducts": {
+    "result": "success",
+    "totalresults": 2,
+    "products": {
+      "product": [
+        {
+          "pid": 3,
+          "gid": 1,
+          "type": "hostingaccount",
+          "name": "Fixture Shared Hosting",
+          "module": "mockcpanel",
+          "pricing": { "USD": { "monthly": "9.99", "annually": "99.00" } }
+        },
+        {
+          "pid": 4,
+          "gid": 1,
+          "type": "hostingaccount",
+          "name": "Fixture VPS",
+          "module": "mockvirtualizor",
+          "pricing": { "USD": { "monthly": "39.99", "annually": "399.00" } }
+        }
+      ]
+    }
+  },
+  "GetPromotions": {
+    "result": "success",
+    "totalresults": 1,
+    "promotions": {
+      "promotion": [
+        {
+          "id": 1,
+          "code": "FIXTURE10",
+          "type": "percentage",
+          "value": "10",
+          "recurring": false,
+          "appliesto": "product"
+        }
+      ]
+    }
+  },
+  "UpdateClientProduct": {
+    "result": "success"
+  },
+  "UpdateClientAddon": {
+    "result": "success"
+  },
+  "UpgradeProduct": {
+    "result": "success",
+    "orderid": 6100,
+    "invoiceid": 0,
+    "status": "Preview (calconly, fixture)",
+    "totaltoday": "15.00",
+    "proratacredit": "0.00",
+    "recurring": "39.99"
+  },
+  "ModuleCreate": {
+    "result": "success",
+    "message": "Fixture: module create simulated, no real provisioning occurred"
+  },
+  "ModuleSuspend": {
+    "result": "success",
+    "message": "Fixture: module suspend simulated"
+  },
+  "ModuleUnsuspend": {
+    "result": "success",
+    "message": "Fixture: module unsuspend simulated"
+  },
+  "ModuleTerminate": {
+    "result": "success",
+    "message": "Fixture: module terminate simulated"
+  },
+  "ModuleChangePackage": {
+    "result": "success",
+    "message": "Fixture: module change package simulated"
+  }
+}

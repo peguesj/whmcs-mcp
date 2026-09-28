@@ -1,0 +1,147 @@
+{
+  "GetInvoices": {
+    "result": "success",
+    "totalresults": 2,
+    "startnumber": 0,
+    "numreturned": 2,
+    "invoices": {
+      "invoice": [
+        {
+          "id": 9001,
+          "userid": 5001,
+          "date": "2026-09-01",
+          "duedate": "2026-09-15",
+          "datepaid": "2026-09-10 12:00:00",
+          "subtotal": "9.99",
+          "tax": "0.00",
+          "total": "9.99",
+          "status": "Paid"
+        },
+        {
+          "id": 9002,
+          "userid": 5002,
+          "date": "2026-09-20",
+          "duedate": "2026-10-04",
+          "datepaid": "0000-00-00 00:00:00",
+          "subtotal": "39.99",
+          "tax": "0.00",
+          "total": "39.99",
+          "status": "Unpaid"
+        }
+      ]
+    }
+  },
+  "GetInvoice": {
+    "result": "success",
+    "invoiceid": 9002,
+    "userid": 5002,
+    "date": "2026-09-20",
+    "duedate": "2026-10-04",
+    "status": "Unpaid",
+    "subtotal": "39.99",
+    "tax": "0.00",
+    "total": "39.99",
+    "balance": "39.99",
+    "items": {
+      "item": [
+        { "id": 1, "type": "Hosting", "description": "Fixture VPS - fixture-client-two.example (2026-09-25 - 2026-10-25)", "amount": "39.99" }
+      ]
+    },
+    "transactions": { "transaction": [] }
+  },
+  "CreateInvoice": {
+    "result": "success",
+    "invoiceid": 9050
+  },
+  "UpdateInvoice": {
+    "result": "success"
+  },
+  "AddInvoicePayment": {
+    "result": "success"
+  },
+  "ApplyCredit": {
+    "result": "success",
+    "amountapplied": "10.00"
+  },
+  "CapturePayment": {
+    "result": "success",
+    "message": "Fixture: capture simulated, no card data transmitted"
+  },
+  "AddCredit": {
+    "result": "success"
+  },
+  "GetCredits": {
+    "result": "success",
+    "credit": "10.00",
+    "creditlog": {
+      "transaction": [
+        { "id": 501, "description": "Fixture: promotional credit", "amount": "10.00", "date": "2026-09-01" }
+      ]
+    }
+  },
+  "GetTransactions": {
+    "result": "success",
+    "totalresults": 1,
+    "transactions": {
+      "transaction": [
+        {
+          "id": 3001,
+          "invoiceid": 9001,
+          "userid": 5001,
+          "gateway": "mockgateway",
+          "date": "2026-09-10",
+          "transid": "FIXTURE-TXN-0001",
+          "amountin": "9.99",
+          "fees": "0.00"
+        }
+      ]
+    }
+  },
+  "AddBillableItem": {
+    "result": "success",
+    "itemid": 4101
+  },
+  "GetPayMethods": {
+    "result": "success",
+    "paymethods": {
+      "paymethod": [
+        {
+          "id": 201,
+          "clientid": 5001,
+          "type": "CreditCard",
+          "gateway": "mockgateway",
+          "cardlastfour": "[redacted]",
+          "cardexpiry": "[redacted]"
+        }
+      ]
+    }
+  },
+  "GetQuotes": {
+    "result": "success",
+    "totalresults": 1,
+    "quotes": {
+      "quote": [
+        {
+          "id": 201,
+          "subject": "Fixture: Annual VPS Renewal Proposal",
+          "stage": "Draft",
+          "userid": 5001,
+          "datecreated": "2026-09-15",
+          "validuntil": "2026-10-15",
+          "total": "399.00"
+        }
+      ]
+    }
+  },
+  "CreateQuote": {
+    "result": "success",
+    "quoteid": 210
+  },
+  "UpdateQuote": {
+    "result": "success"
+  },
+  "SendQuote": {
+    "result": "success",
+    "message": "Fixture: quote email simulated"
+  }
+}

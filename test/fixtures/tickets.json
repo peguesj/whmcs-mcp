@@ -1,0 +1,142 @@
+{
+  "GetSupportDepartments": {
+    "result": "success",
+    "totalresults": 2,
+    "departments": {
+      "department": [
+        { "id": 1, "name": "Fixture Support" },
+        { "id": 2, "name": "Fixture Billing" }
+      ]
+    }
+  },
+  "GetSupportStatuses": {
+    "result": "success",
+    "statuses": {
+      "status": [
+        { "title": "Open", "showticketcount": true },
+        { "title": "Answered", "showticketcount": true },
+        { "title": "Customer-Reply", "showticketcount": true },
+        { "title": "On Hold", "showticketcount": false },
+        { "title": "In Progress", "showticketcount": true },
+        { "title": "Closed", "showticketcount": false }
+      ]
+    }
+  },
+  "GetTicketPredefinedReplies": {
+    "result": "success",
+    "predefinedreplies": {
+      "predefinedreply": [
+        { "id": 1, "subject": "Fixture: Awaiting more info", "message": "Synthetic canned reply text." }
+      ]
+    }
+  },
+  "GetTicketCounts": {
+    "result": "success",
+    "counts": { "Open": 3, "Answered": 1, "Customer-Reply": 1, "Closed": 12 }
+  },
+  "GetTickets": {
+    "result": "success",
+    "totalresults": 2,
+    "startnumber": 0,
+    "numreturned": 2,
+    "tickets": {
+      "ticket": [
+        {
+          "id": 4001,
+          "tid": "TCK-40001",
+          "deptid": 1,
+          "deptname": "Fixture Support",
+          "userid": 5001,
+          "name": "Fixture Client One",
+          "email": "[redacted]",
+          "subject": "Synthetic: cannot log in",
+          "status": "Open",
+          "priority": "Medium",
+          "lastreply": "2026-09-26 15:22:00",
+          "date": "2026-09-26 14:01:00"
+        },
+        {
+          "id": 4002,
+          "tid": "TCK-40002",
+          "deptid": 2,
+          "deptname": "Fixture Billing",
+          "userid": 5002,
+          "name": "Fixture Client Two",
+          "email": "[redacted]",
+          "subject": "Synthetic: invoice question",
+          "status": "Answered",
+          "priority": "Low",
+          "lastreply": "2026-09-25 11:10:00",
+          "date": "2026-09-24 09:30:00"
+        }
+      ]
+    }
+  },
+  "GetTicket": {
+    "result": "success",
+    "ticketid": 4001,
+    "tid": "TCK-40001",
+    "deptid": 1,
+    "deptname": "Fixture Support",
+    "userid": 5001,
+    "name": "Fixture Client One",
+    "email": "[redacted]",
+    "subject": "Synthetic: cannot log in",
+    "message": "Synthetic ticket body: I cannot access my fixture account.",
+    "status": "Open",
+    "priority": "Medium",
+    "date": "2026-09-26 14:01:00",
+    "replies": {
+      "reply": [
+        {
+          "replyid": 9001,
+          "message": "Synthetic reply: please try resetting your fixture password.",
+          "admin": "Fixture Admin",
+          "name": "",
+          "email": "",
+          "date": "2026-09-26 15:22:00"
+        }
+      ]
+    },
+    "attachments": { "attachment": [] }
+  },
+  "OpenTicket": {
+    "result": "success",
+    "ticketid": 4010,
+    "tid": "TCK-40010"
+  },
+  "AddTicketReply": {
+    "result": "success"
+  },
+  "UpdateTicketReply": {
+    "result": "success"
+  },
+  "AddTicketNote": {
+    "result": "success",
+    "noteid": 701
+  },
+  "GetTicketNotes": {
+    "result": "success",
+    "notes": {
+      "note": [
+        { "id": 701, "message": "Synthetic internal note.", "admin": "Fixture Admin", "date": "2026-09-26 15:00:00" }
+      ]
+    }
+  },
+  "UpdateTicket": {
+    "result": "success"
+  },
+  "MergeTicket": {
+    "result": "success",
+    "ticketid": 4001,
+    "message": "Fixture: tickets merged (dry run / mock only)"
+  },
+  "DeleteTicket": {
+    "result": "success"
+  },
+  "GetTicketAttachment": {
+    "result": "success",
+    "filename": "fixture-attachment.txt",
+    "data": "U3ludGhldGljIGZpeHR1cmUgYXR0YWNobWVudCBjb250ZW50Lg=="
+  }
+}

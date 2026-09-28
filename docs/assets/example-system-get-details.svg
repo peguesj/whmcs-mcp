@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" role="img" aria-labelledby="t1 d1">
+  <title id="t1">Illustrative example: system_get_details tool call and response</title>
+  <desc id="d1">Not a real screenshot. Synthetic terminal mockup showing the system_get_details MCP tool call and a mock JSON response with a WHMCS version string, used to illustrate version discovery.</desc>
+  <rect width="720" height="300" rx="10" fill="#0d1117"/>
+  <rect x="0" y="0" width="720" height="34" rx="10" fill="#161b22"/>
+  <circle cx="18" cy="17" r="6" fill="#ff5f56"/>
+  <circle cx="38" cy="17" r="6" fill="#ffbd2e"/>
+  <circle cx="58" cy="17" r="6" fill="#27c93f"/>
+  <text x="360" y="22" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#8b949e">mcp-inspector — synthetic fixture data (illustrative)</text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+    <text x="20" y="64" fill="#7ee787">&gt;</text>
+    <text x="36" y="64" fill="#c9d1d9">call system_get_details {}</text>
+    <text x="20" y="94" fill="#8b949e">// response (mock fixture)</text>
+    <text x="20" y="118" fill="#c9d1d9">{</text>
+    <text x="40" y="140" fill="#c9d1d9">"whmcs": {</text>
+    <text x="60" y="162" fill="#79c0ff">"version"</text><text x="130" y="162" fill="#c9d1d9">: </text><text x="146" y="162" fill="#a5d6ff">"9.0.6"</text><text x="204" y="162" fill="#c9d1d9">,</text>
+    <text x="60" y="184" fill="#79c0ff">"license"</text><text x="128" y="184" fill="#c9d1d9">: </text><text x="144" y="184" fill="#a5d6ff">"Enterprise"</text>
+    <text x="40" y="206" fill="#c9d1d9">},</text>
+    <text x="40" y="228" fill="#79c0ff">"compatible"</text><text x="132" y="228" fill="#c9d1d9">: </text><text x="148" y="228" fill="#ffa657">true</text>
+    <text x="20" y="250" fill="#c9d1d9">}</text>
+    <text x="20" y="278" fill="#3fb950">✓ version ≥ 8.0 — no compatibility warning</text>
+  </g>
+</svg>
