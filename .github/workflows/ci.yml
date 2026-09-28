@@ -49,9 +49,9 @@ jobs:
 
       - name: Check generated docs are up to date (no drift)
         run: |
-          if ! git diff --quiet -- docs/tools.md site/data/tools.json; then
+          if ! git diff --quiet -- docs/tools.md docs/data/tools.json; then
             echo "::error::Generated docs are out of date. Run 'npm run gen:docs' locally and commit the result."
-            git --no-pager diff -- docs/tools.md site/data/tools.json
+            git --no-pager diff -- docs/tools.md docs/data/tools.json
             exit 1
           fi
 

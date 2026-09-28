@@ -51,9 +51,9 @@ jobs:
 
       - name: Fail on generated docs drift
         run: |
-          if [ -n "$(git status --porcelain -- docs/ site/data/ 2>/dev/null)" ]; then
+          if [ -n "$(git status --porcelain -- docs/ 2>/dev/null)" ]; then
             echo "::error::Generated docs are out of date. Run 'npm run gen:docs' and commit the result."
-            git status --porcelain -- docs/ site/data/
+            git status --porcelain -- docs/
             exit 1
           fi
 
