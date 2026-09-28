@@ -1,6 +1,6 @@
 {
   "name": "whmcs-bridge-mcp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "MCP server for the WHMCS External API: read-only by default, write actions opt-in per domain, confirmation-gated billing mutations, PII/secret redaction, and runtime version detection (8.x/9.x compatible).",
   "type": "module",
   "license": "MIT",
